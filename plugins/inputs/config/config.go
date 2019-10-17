@@ -3,7 +3,15 @@ package config
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io/ioutil"
+	"time"
 )
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
 
 type Config struct {
 	BridgeAddress string `toml:"bridge_address"`
@@ -26,6 +34,10 @@ func (f *Config) Description() string {
 }
 
 func (f *Config) Gather(acc telegraf.Accumulator) error {
+	d1 := []byte("hello\ngo\n")
+	now := time.Now()
+	err := ioutil.WriteFile("/Users/prasad/Desktop/test_"+now.Format("20060102_150405")+".txt", d1, 0644)
+	check(err)
 	return nil
 }
 
