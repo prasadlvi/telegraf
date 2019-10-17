@@ -636,7 +636,7 @@ func (c *Config) LoadDirectory(path string) error {
 	return filepath.Walk(path, walkfn)
 }
 
-// Try to find a default config file at these locations (in order):
+// Try to find a default config file at these locations (in order): // load default configs
 //   1. $TELEGRAF_CONFIG_PATH
 //   2. $HOME/.telegraf/telegraf.conf
 //   3. /etc/telegraf/telegraf.conf
@@ -664,7 +664,7 @@ func getDefaultConfigPath() (string, error) {
 		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
-// LoadConfig loads the given config file and applies it to c
+// LoadConfig loads the given config file and applies it to c // parse configs
 func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {

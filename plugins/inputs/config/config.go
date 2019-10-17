@@ -3,7 +3,9 @@ package config
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"io/ioutil"
+	"io"
+	"net/http"
+	"os"
 	"time"
 )
 
@@ -34,10 +36,27 @@ func (f *Config) Description() string {
 }
 
 func (f *Config) Gather(acc telegraf.Accumulator) error {
-	d1 := []byte("hello\ngo\n")
 	now := time.Now()
-	err := ioutil.WriteFile("/Users/prasad/Desktop/test_"+now.Format("20060102_150405")+".txt", d1, 0644)
+
+	resp, err := http.Get("http://localhost/bridge/telegraf")
+	if err != nil {
+		check(err)
+	}
+
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create("/Users/prasad/Desktop/telegrafconf_" + now.Format("20060102_150405") + ".conf")
+	if err != nil {
+		check(err)
+	}
+
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
 	check(err)
+
 	return nil
 }
 
