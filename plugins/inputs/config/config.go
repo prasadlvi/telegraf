@@ -41,7 +41,7 @@ func (f *Config) Description() string {
 
 func (f *Config) Gather(acc telegraf.Accumulator) error {
 
-	resp, err := http.Get("http://localhost/bridge/telegraf")
+	resp, err := http.Get("http://192.168.1.207/bridge/telegraf")
 	if err != nil {
 		check(err)
 	}
