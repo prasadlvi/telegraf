@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -44,8 +45,24 @@ func (f *Config) Description() string {
 func (f *Config) Gather(acc telegraf.Accumulator) error {
 
 	log.Printf("Bridge address : %s", f.BridgeAddress)
+	inputPluginConfigMd5 := calculateMd5OfInputPluginConfig(f.ConfigFilePath)
 
-	resp, err := http.Get("http://" + f.BridgeAddress + "/bridge/telegraf")
+	//resp, err := http.Get("http://" + f.BridgeAddress + "/bridge/telegraf")
+	//if err != nil {
+	//	check(err)
+	//}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "http://"+f.BridgeAddress+"/bridge/telegraf", nil)
+	if err != nil {
+		check(err)
+	}
+
+	q := req.URL.Query()
+	q.Add("md5", inputPluginConfigMd5)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
 	if err != nil {
 		check(err)
 	}
@@ -92,13 +109,6 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
 	if err != nil {
 		check(err)
 	}
-
-	dir, err := os.Getwd()
-	if err != nil {
-		check(err)
-	}
-
-	println(dir)
 
 	rd := bufio.NewReader(fin)
 
@@ -181,6 +191,68 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
 	}
 }
 
-func calculateMd5OfInputPluginConfig() {
+func calculateMd5OfInputPluginConfig(configFilePath string) string {
+	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
+	const PluginEnd = "[[inputs.config]]"
 
+	err := os.Chdir(configFilePath)
+	if err != nil {
+		check(err)
+	}
+
+	// read the current config file
+	fin, err := os.OpenFile("telegraf.conf", os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		check(err)
+	}
+
+	rd := bufio.NewReader(fin)
+
+	writeToBuf := false
+	lineNumber := 1
+	inputPluginLinesStart := 0
+	inputPluginConfMd5 := md5.New()
+
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			check(err)
+			break
+		}
+
+		// calculate the start line number of input plugin config section
+		if strings.Contains(line, InputPluginStart) {
+			inputPluginLinesStart = lineNumber + 2
+		}
+
+		// write input plugin config section to the buffer
+		if lineNumber == inputPluginLinesStart {
+			writeToBuf = true
+
+		}
+
+		// break the loop after finish reading input plugin config
+		if strings.Contains(line, PluginEnd) && lineNumber > inputPluginLinesStart {
+			break
+		}
+
+		if writeToBuf {
+			_, err := io.WriteString(inputPluginConfMd5, line)
+			if err != nil {
+				check(err)
+			}
+		}
+
+		lineNumber++
+	}
+
+	err = fin.Close()
+	if err != nil {
+		check(err)
+	}
+
+	return string(inputPluginConfMd5.Sum(nil))
 }
