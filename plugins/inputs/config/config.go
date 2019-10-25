@@ -17,7 +17,7 @@ import (
 
 func check(e error) {
 	if e != nil {
-		log.Fatal(e)
+		log.Print(e)
 	}
 }
 
@@ -56,7 +56,10 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", "http://"+f.BridgeAddress+"/bridge/telegraf", nil)
 	if err != nil {
 		check(err)
+		return nil
 	}
+
+	println("input md5 : " + inputPluginConfigMd5)
 
 	q := req.URL.Query()
 	q.Add("md5", inputPluginConfigMd5)
@@ -65,19 +68,25 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		check(err)
+		return nil
 	}
-
-	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			check(err)
+			return nil
 		}
 		inputPluginConfig := string(bodyBytes)
 		log.Printf("I! Input plugin config is \n%s\n", inputPluginConfig)
 		log.Printf("I! Config file path : %s", f.ConfigFilePath)
-		updateInputPluginConfig(inputPluginConfig, f.ConfigFilePath)
+		updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
+	}
+
+	err1 := resp.Body.Close()
+	if err1 != nil {
+		check(err1)
+		return nil
 	}
 
 	return nil
@@ -89,7 +98,7 @@ func init() {
 	})
 }
 
-func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
+func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 string, configFilePath string) {
 	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
 	const PluginEnd = "[[inputs.config]]"
 
@@ -129,11 +138,20 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
 
 		// calculate the start line number of input plugin config section
 		if strings.Contains(line, InputPluginStart) {
-			inputPluginLinesStart = lineNumber + 2
+			inputPluginLinesStart = lineNumber + 4
 		}
 
-		// do not output plugin config section to output file
-		if lineNumber == inputPluginLinesStart {
+		// insert revision (md5) and timestamp (This use two lines)
+		if lineNumber == inputPluginLinesStart-2 {
+			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Revision : %s, Timestamp : %s\n", inputPluginConfigMd5,
+				time.Now().Format("2019-10-25 16:48:00 JST")))
+			if err2 != nil {
+				check(err2)
+			}
+		}
+
+		// do not output plugin config section and revsion/timestamp line (2 lines with the newline) to output file
+		if lineNumber == inputPluginLinesStart-2 {
 			copyLineToOutput = false
 
 			_, err1 := fmt.Fprintln(fout)
@@ -178,13 +196,13 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
 		check(err)
 	}
 
-	// rename file
-	now := time.Now()
-	err1 := os.Rename("telegraf.conf", "telegraf.conf."+now.Format("20060102_150405"))
+	// remove current config file
+	err1 := os.Remove("telegraf.conf")
 	if err1 != nil {
 		check(err1)
 	}
 
+	// rename new config file
 	err2 := os.Rename("telegraf.conf.new", "telegraf.conf")
 	if err2 != nil {
 		check(err2)
@@ -213,6 +231,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 	inputPluginLinesStart := 0
 	inputPluginConfMd5 := md5.New()
 
+	inputPluginConfigStr := ""
 	for {
 		line, err := rd.ReadString('\n')
 		if err != nil {
@@ -225,13 +244,12 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 
 		// calculate the start line number of input plugin config section
 		if strings.Contains(line, InputPluginStart) {
-			inputPluginLinesStart = lineNumber + 2
+			inputPluginLinesStart = lineNumber + 4
 		}
 
 		// write input plugin config section to the buffer
 		if lineNumber == inputPluginLinesStart {
 			writeToBuf = true
-
 		}
 
 		// break the loop after finish reading input plugin config
@@ -239,7 +257,8 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 			break
 		}
 
-		if writeToBuf {
+		if writeToBuf && len(strings.TrimSpace(line)) > 0 {
+			inputPluginConfigStr += line
 			_, err := io.WriteString(inputPluginConfMd5, line)
 			if err != nil {
 				check(err)
@@ -254,5 +273,6 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 		check(err)
 	}
 
-	return string(inputPluginConfMd5.Sum(nil))
+	println("@@@" + inputPluginConfigStr + "@@@")
+	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil))
 }
