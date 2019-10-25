@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,12 +16,13 @@ import (
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		log.Fatal(e)
 	}
 }
 
 type Config struct {
-	BridgeAddress string `toml:"bridge_address"`
+	BridgeAddress  string `toml:"bridge_address"`
+	ConfigFilePath string `toml:"config_file_path"`
 }
 
 const sampleConfig = `
@@ -41,7 +43,9 @@ func (f *Config) Description() string {
 
 func (f *Config) Gather(acc telegraf.Accumulator) error {
 
-	resp, err := http.Get("http://192.168.1.207/bridge/telegraf")
+	log.Printf("Bridge address : %s", f.BridgeAddress)
+
+	resp, err := http.Get("http://" + f.BridgeAddress + "/bridge/telegraf")
 	if err != nil {
 		check(err)
 	}
@@ -54,7 +58,9 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 			check(err)
 		}
 		inputPluginConfig := string(bodyBytes)
-		updateInputPluginConfig(inputPluginConfig)
+		log.Printf("I! Input plugin config is \n%s\n", inputPluginConfig)
+		log.Printf("I! Config file path : %s", f.ConfigFilePath)
+		updateInputPluginConfig(inputPluginConfig, f.ConfigFilePath)
 	}
 
 	return nil
@@ -66,21 +72,33 @@ func init() {
 	})
 }
 
-func updateInputPluginConfig(inputPluginConfig string) {
+func updateInputPluginConfig(inputPluginConfig string, configFilePath string) {
 	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
-	const PluginEnd = "###############################################################################"
+	const PluginEnd = "[[inputs.config]]"
+
+	err := os.Chdir(configFilePath)
+	if err != nil {
+		check(err)
+	}
 
 	// create a new temp config file
-	fout, err := os.Create("/etc/telegraf/telegraf.conf.new")
+	fout, err := os.Create("telegraf.conf.new")
 	if err != nil {
 		check(err)
 	}
 
 	// read the current config file
-	fin, err := os.OpenFile("/etc/telegraf/telegraf.conf", os.O_RDONLY, os.ModePerm)
+	fin, err := os.OpenFile("telegraf.conf", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		check(err)
 	}
+
+	dir, err := os.Getwd()
+	if err != nil {
+		check(err)
+	}
+
+	println(dir)
 
 	rd := bufio.NewReader(fin)
 
@@ -88,6 +106,7 @@ func updateInputPluginConfig(inputPluginConfig string) {
 	copyLineToOutput := true
 	lineNumber := 1
 	inputPluginLinesStart := 0
+
 	for {
 		line, err := rd.ReadString('\n')
 		if err != nil {
@@ -151,13 +170,17 @@ func updateInputPluginConfig(inputPluginConfig string) {
 
 	// rename file
 	now := time.Now()
-	err1 := os.Rename("/etc/telegraf/telegraf.conf", "/etc/telegraf/telegraf.conf."+now.Format("20060102_150405"))
+	err1 := os.Rename("telegraf.conf", "telegraf.conf."+now.Format("20060102_150405"))
 	if err1 != nil {
 		check(err1)
 	}
 
-	err2 := os.Rename("/etc/telegraf/telegraf.conf.new", "/etc/telegraf/telegraf.conf")
+	err2 := os.Rename("telegraf.conf.new", "telegraf.conf")
 	if err2 != nil {
 		check(err2)
 	}
+}
+
+func calculateMd5OfInputPluginConfig() {
+
 }
