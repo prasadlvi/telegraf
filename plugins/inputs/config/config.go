@@ -143,8 +143,8 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 
 		// insert revision (md5) and timestamp (This use two lines)
 		if lineNumber == inputPluginLinesStart-2 {
-			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Revision : %s, Timestamp : %s\n", inputPluginConfigMd5,
-				time.Now().Format("2019-10-25 16:48:00 JST")))
+			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Revision: %s, Time: %s #\n", inputPluginConfigMd5,
+				time.Now().Format(time.RFC3339)))
 			if err2 != nil {
 				check(err2)
 			}
