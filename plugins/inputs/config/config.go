@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"io/ioutil"
@@ -24,6 +25,7 @@ func check(e error) {
 type Config struct {
 	BridgeAddress  string `toml:"bridge_address"`
 	ConfigFilePath string `toml:"config_file_path"`
+	tls.ClientConfig
 }
 
 const sampleConfig = `
@@ -47,13 +49,22 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 	log.Printf("Bridge address : %s", f.BridgeAddress)
 	inputPluginConfigMd5 := calculateMd5OfInputPluginConfig(f.ConfigFilePath)
 
-	//resp, err := http.Get("http://" + f.BridgeAddress + "/bridge/telegraf")
-	//if err != nil {
-	//	check(err)
-	//}
+	tlsCfg, err := f.TLSConfig()
+	if err != nil {
+		check(err)
+		return nil
+	}
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://"+f.BridgeAddress+"/bridge/telegraf", nil)
+	log.Println("tlsCfg : ", tlsCfg.InsecureSkipVerify)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+	}
+
+	req, err := http.NewRequest("GET", "https://"+f.BridgeAddress, nil)
 	if err != nil {
 		check(err)
 		return nil
