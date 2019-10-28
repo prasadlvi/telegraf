@@ -23,6 +23,7 @@ func check(e error) {
 }
 
 type Config struct {
+	SourceAddress  string `toml:"source_address"`
 	BridgeAddress  string `toml:"bridge_address"`
 	ConfigFilePath string `toml:"config_file_path"`
 	tls.ClientConfig
@@ -62,7 +63,7 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 		},
 	}
 
-	req, err := http.NewRequest("GET", "https://"+f.BridgeAddress, nil)
+	req, err := http.NewRequest("GET", f.BridgeAddress, nil)
 	if err != nil {
 		check(err)
 		return nil
@@ -72,6 +73,7 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 
 	q := req.URL.Query()
 	q.Add("md5", inputPluginConfigMd5)
+	q.Add("source", f.SourceAddress)
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := client.Do(req)
@@ -87,9 +89,8 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 		inputPluginConfig := string(bodyBytes)
-		log.Printf("I! Input plugin config is \n%s\n", inputPluginConfig)
-		log.Printf("I! Config file path : %s", f.ConfigFilePath)
-		//updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
+		log.Printf("I! New input plugin config received.")
+		updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
 	}
 
 	err1 := resp.Body.Close()
@@ -282,6 +283,5 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 		check(err)
 	}
 
-	println("@@@" + inputPluginConfigStr + "@@@")
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil))
 }
