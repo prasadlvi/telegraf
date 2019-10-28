@@ -55,8 +55,6 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	log.Println("tlsCfg : ", tlsCfg.InsecureSkipVerify)
-
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
@@ -91,7 +89,7 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 		inputPluginConfig := string(bodyBytes)
 		log.Printf("I! Input plugin config is \n%s\n", inputPluginConfig)
 		log.Printf("I! Config file path : %s", f.ConfigFilePath)
-		updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
+		//updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
 	}
 
 	err1 := resp.Body.Close()
