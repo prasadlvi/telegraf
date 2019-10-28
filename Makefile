@@ -36,7 +36,7 @@ deps:
 
 .PHONY: telegraf
 telegraf:
-	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -gcflags "all=-N -l" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: go-install
 go-install:
