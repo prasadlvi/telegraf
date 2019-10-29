@@ -6,12 +6,14 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"github.com/kardianos/osext"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -320,18 +322,18 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 		if lineNumber == inputPluginLinesStart-2 {
 			copyLineToOutput = false
 
-			_, err1 := fmt.Fprintln(fout)
-			if err1 != nil {
+			_, err := fmt.Fprintln(fout)
+			if err != nil {
 				return err
 			}
 
-			_, err2 := fmt.Fprint(fout, inputPluginConfig)
-			if err2 != nil {
+			_, err = fmt.Fprint(fout, inputPluginConfig)
+			if err != nil {
 				return err
 			}
 
-			_, err3 := fmt.Fprintln(fout)
-			if err3 != nil {
+			_, err = fmt.Fprintln(fout)
+			if err != nil {
 				return err
 			}
 		}
@@ -363,14 +365,20 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 	}
 
 	// remove current config file
-	err1 := os.Remove("telegraf.conf")
-	if err1 != nil {
+	err = os.Remove("telegraf.conf")
+	if err != nil {
 		return err
 	}
 
 	// rename new config file
-	err2 := os.Rename("telegraf.conf.new", "telegraf.conf")
-	if err2 != nil {
+	err = os.Rename("telegraf.conf.new", "telegraf.conf")
+	if err != nil {
+		return err
+	}
+
+	// restart Telegraf to load new input plugin configs
+	err = reloadConfig()
+	if err != nil {
 		return err
 	}
 
@@ -441,4 +449,18 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
+}
+
+func reloadConfig() error {
+	file, err := osext.Executable()
+	if err != nil {
+		return err
+	}
+
+	log.Println("Restarting Telegraf to load new input plugin configuration ...")
+	err = syscall.Exec(file, os.Args, os.Environ())
+	if err != nil {
+		return err
+	}
+	return nil
 }
