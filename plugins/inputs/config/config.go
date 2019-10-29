@@ -48,12 +48,14 @@ func (f *Config) Description() string {
 func (f *Config) Gather(acc telegraf.Accumulator) error {
 
 	log.Printf("Bridge address : %s", f.BridgeAddress)
-	inputPluginConfigMd5 := calculateMd5OfInputPluginConfig(f.ConfigFilePath)
+	inputPluginConfigMd5, err := calculateMd5OfInputPluginConfig(f.ConfigFilePath)
+	if err != nil {
+		return err
+	}
 
 	tlsCfg, err := f.TLSConfig()
 	if err != nil {
-		check(err)
-		return nil
+		return err
 	}
 
 	client := &http.Client{
@@ -65,8 +67,7 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 
 	req, err := http.NewRequest("GET", f.BridgeAddress, nil)
 	if err != nil {
-		check(err)
-		return nil
+		return err
 	}
 
 	println("input md5 : " + inputPluginConfigMd5)
@@ -78,25 +79,25 @@ func (f *Config) Gather(acc telegraf.Accumulator) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		check(err)
-		return nil
+		return err
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			check(err)
-			return nil
+			return err
 		}
 		inputPluginConfig := string(bodyBytes)
 		log.Printf("I! New input plugin config received.")
-		updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
+		err = updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, f.ConfigFilePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	err1 := resp.Body.Close()
 	if err1 != nil {
-		check(err1)
-		return nil
+		return err
 	}
 
 	return nil
@@ -108,25 +109,25 @@ func init() {
 	})
 }
 
-func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 string, configFilePath string) {
+func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 string, configFilePath string) error {
 	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
 	const PluginEnd = "[[inputs.config]]"
 
 	err := os.Chdir(configFilePath)
 	if err != nil {
-		check(err)
+		return err
 	}
 
 	// create a new temp config file
 	fout, err := os.Create("telegraf.conf.new")
 	if err != nil {
-		check(err)
+		return err
 	}
 
 	// read the current config file
 	fin, err := os.OpenFile("telegraf.conf", os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		check(err)
+		return err
 	}
 
 	rd := bufio.NewReader(fin)
@@ -142,8 +143,7 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 			if err == io.EOF {
 				break
 			}
-			check(err)
-			return
+			return err
 		}
 
 		// calculate the start line number of input plugin config section
@@ -156,7 +156,7 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Revision: %s, Time: %s #\n", inputPluginConfigMd5,
 				time.Now().Format(time.RFC3339)))
 			if err2 != nil {
-				check(err2)
+				return err
 			}
 		}
 
@@ -166,17 +166,17 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 
 			_, err1 := fmt.Fprintln(fout)
 			if err1 != nil {
-				check(err1)
+				return err
 			}
 
 			_, err2 := fmt.Fprint(fout, inputPluginConfig)
 			if err2 != nil {
-				check(err2)
+				return err
 			}
 
 			_, err3 := fmt.Fprintln(fout)
 			if err3 != nil {
-				check(err3)
+				return err
 			}
 		}
 
@@ -189,7 +189,7 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 		if copyLineToOutput == true {
 			_, err := fmt.Fprint(fout, line)
 			if err != nil {
-				check(err)
+				return err
 			}
 		}
 
@@ -198,40 +198,42 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 
 	err = fout.Close()
 	if err != nil {
-		check(err)
+		return err
 	}
 
 	err = fin.Close()
 	if err != nil {
-		check(err)
+		return err
 	}
 
 	// remove current config file
 	err1 := os.Remove("telegraf.conf")
 	if err1 != nil {
-		check(err1)
+		return err
 	}
 
 	// rename new config file
 	err2 := os.Rename("telegraf.conf.new", "telegraf.conf")
 	if err2 != nil {
-		check(err2)
+		return err
 	}
+
+	return nil
 }
 
-func calculateMd5OfInputPluginConfig(configFilePath string) string {
+func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
 	const PluginEnd = "[[inputs.config]]"
 
 	err := os.Chdir(configFilePath)
 	if err != nil {
-		check(err)
+		return "", err
 	}
 
 	// read the current config file
 	fin, err := os.OpenFile("telegraf.conf", os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		check(err)
+		return "", err
 	}
 
 	rd := bufio.NewReader(fin)
@@ -248,8 +250,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 			if err == io.EOF {
 				break
 			}
-			check(err)
-			break
+			return "", err
 		}
 
 		// calculate the start line number of input plugin config section
@@ -271,7 +272,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 			inputPluginConfigStr += line
 			_, err := io.WriteString(inputPluginConfMd5, line)
 			if err != nil {
-				check(err)
+				return "", err
 			}
 		}
 
@@ -280,8 +281,8 @@ func calculateMd5OfInputPluginConfig(configFilePath string) string {
 
 	err = fin.Close()
 	if err != nil {
-		check(err)
+		return "", err
 	}
 
-	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil))
+	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
 }
