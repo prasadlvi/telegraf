@@ -451,7 +451,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 		return "", err
 	}
 
-	log.Printf("inputPluginConfMd5 : @%s@", inputPluginConfMd5)
+	log.Printf("inputPluginConfMd5 : @%s@", inputPluginConfigStr)
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
 }
 
