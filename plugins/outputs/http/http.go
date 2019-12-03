@@ -387,7 +387,7 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 }
 
 func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
-	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
+	const InputPluginStart = "[[inputs."
 	const PluginEnd = "###############################################################################"
 
 	err := os.Chdir(configFilePath)
@@ -420,7 +420,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 
 		// calculate the start line number of input plugin config section
 		if strings.Contains(line, InputPluginStart) {
-			inputPluginLinesStart = lineNumber + 2
+			inputPluginLinesStart = lineNumber
 		}
 
 		// write input plugin config section to the buffer
@@ -445,13 +445,12 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 		return "", err
 	}
 
-	_, err = io.WriteString(inputPluginConfMd5,
-		strings.TrimSuffix(strings.TrimSuffix(inputPluginConfigStr, "\n"), "\r"))
-	if err != nil {
-		return "", err
-	}
+	inputPluginConfigStr = strings.TrimSuffix(strings.TrimSuffix(inputPluginConfigStr, "\n"), "\r")
+	_, err = io.WriteString(inputPluginConfMd5, inputPluginConfigStr)
 
-	log.Printf("inputPluginConfMd5 : @%s@", inputPluginConfigStr)
+	inputPluginConfigStr = "@" + inputPluginConfigStr + "@"
+
+	log.Printf("inputPluginConfMd5 : %s", inputPluginConfigStr)
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
 }
 
