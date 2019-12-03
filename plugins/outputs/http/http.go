@@ -269,7 +269,7 @@ func init() {
 }
 
 func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 string, configFilePath string) error {
-	const InputPluginStart = "[[inputs."
+	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
 	const PluginEnd = "###############################################################################"
 
 	err := os.Chdir(configFilePath)
@@ -307,7 +307,7 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 
 		// calculate the start line number of input plugin config section
 		if strings.Contains(line, InputPluginStart) && inputPluginLinesStart == 0 {
-			inputPluginLinesStart = lineNumber + 2
+			inputPluginLinesStart = lineNumber + 4
 		}
 
 		// insert revision (md5) and timestamp (This use two lines)
