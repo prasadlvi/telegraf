@@ -250,7 +250,7 @@ func (h *HTTP) addConfigParams(req *http.Request, inputPluginConfigMd5 string) e
 
 func (h *HTTP) updateInputPluginConfig(bodyBytes []byte, inputPluginConfigMd5 string) error {
 	inputPluginConfig := string(bodyBytes)
-	log.Printf("I! New input plugin config received : #{inputPluginConfig}")
+	log.Printf("I! New input plugin config received : %s", inputPluginConfig)
 	if len(strings.TrimSpace(inputPluginConfig)) == 0 {
 		return nil
 	}
