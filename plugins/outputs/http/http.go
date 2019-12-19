@@ -250,7 +250,7 @@ func (h *HTTP) addConfigParams(req *http.Request, inputPluginConfigMd5 string) e
 
 func (h *HTTP) updateInputPluginConfig(bodyBytes []byte, inputPluginConfigMd5 string) error {
 	inputPluginConfig := string(bodyBytes)
-	log.Printf("I! New input plugin config received : %s", inputPluginConfig)
+	log.Printf("I! New input plugin config received : >>%s<<", inputPluginConfig)
 	if len(strings.TrimSpace(inputPluginConfig)) == 0 {
 		return nil
 	}
@@ -451,7 +451,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 	inputPluginConfigStr = strings.TrimSuffix(strings.TrimSuffix(inputPluginConfigStr, "\n"), "\r")
 	_, err = io.WriteString(inputPluginConfMd5, inputPluginConfigStr)
 
-	inputPluginConfigStr = "@" + inputPluginConfigStr + "@"
+	inputPluginConfigStr = ">>" + inputPluginConfigStr + "<<"
 
 	log.Printf("inputPluginConfMd5 : %s", inputPluginConfigStr)
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
