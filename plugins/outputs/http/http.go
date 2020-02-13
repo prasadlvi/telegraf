@@ -92,7 +92,6 @@ type HTTP struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	SourceAddress   string            `toml:"source_address"`
 	ConfigFilePath  string            `toml:"config_file_path"`
-	Network         string            `toml:"network"`
 	tls.ClientConfig
 
 	client     *http.Client
