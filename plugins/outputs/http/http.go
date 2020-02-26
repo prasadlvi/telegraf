@@ -461,11 +461,6 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 }
 
 func reloadConfig() error {
-	file, err := osext.Executable()
-	if err != nil {
-		return err
-	}
-
 	log.Println("Restarting Telegraf to load new input plugin configuration ...")
 
 	if runtime.GOOS == "windows" {
@@ -475,6 +470,10 @@ func reloadConfig() error {
 			return err
 		}
 	} else {
+		file, err := osext.Executable()
+		if err != nil {
+			return err
+		}
 		err = syscall.Exec(file, os.Args, os.Environ())
 		if err != nil {
 			return err
