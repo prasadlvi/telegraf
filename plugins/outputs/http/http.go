@@ -80,6 +80,8 @@ const (
 	defaultMethod        = http.MethodPost
 )
 
+var inputPluginConfigMd5 string
+
 type HTTP struct {
 	URL             string            `toml:"url"`
 	Timeout         internal.Duration `toml:"timeout"`
@@ -215,7 +217,13 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.Header.Set(k, v)
 	}
 
-	inputPluginConfigMd5, err := calculateMd5OfInputPluginConfig(h.ConfigFilePath)
+	if inputPluginConfigMd5 == "" {
+		inputPluginConfigMd5, err = calculateMd5OfInputPluginConfig(h.ConfigFilePath)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = h.addConfigParams(req, inputPluginConfigMd5)
 	if err != nil {
 		return err
@@ -456,7 +464,7 @@ func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
 
 	inputPluginConfigStr = ">>" + inputPluginConfigStr + "<<"
 
-	log.Printf("inputPluginConfMd5 : %s", inputPluginConfigStr)
+	log.Printf("Input plugin config : %s\n, md5 : %s", inputPluginConfigStr, inputPluginConfigMd5)
 	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
 }
 
