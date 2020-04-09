@@ -4,7 +4,7 @@ package win_eventlog
 
 import (
 	"bytes"
-	"strconv"
+	"regexp"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -100,16 +100,20 @@ loop:
 				eventDesc = append(eventDesc, kv.Value)
 			}
 
+			re := regexp.MustCompile(`\r?\n`)
+			description := strings.Join(eventDesc, "|")
+			description = re.ReplaceAllString(description, "|")
+
 			// Pass collected metrics
 			acc.AddFields("win_event",
 				map[string]interface{}{
 					"record_id":   evt.RecordID,
 					"event_id":    evt.EventIdentifier.ID,
-					"description": strings.Join(eventDesc, "\n"),
+					"level":       int(evt.LevelRaw),
+					"description": description,
 					"source":      evt.Provider.Name,
 					"created":     evt.TimeCreated.SystemTime.String(),
 				}, map[string]string{
-					"level":         strconv.Itoa(int(evt.LevelRaw)),
 					"eventlog_name": evt.Channel,
 				})
 
