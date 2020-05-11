@@ -275,7 +275,7 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
-	revision, err := getRevision()
+	revision, err := getRevision(h.ConfigFilePath)
 	if err != nil {
 		return err
 	}
@@ -466,10 +466,10 @@ func reloadConfig() error {
 	return nil
 }
 
-func getRevision() (int, error) {
+func getRevision(path string) (int, error) {
 	log.Printf("I! Going to find current revision")
 
-	fin, err := os.OpenFile("telegraf-revision", os.O_RDONLY, os.ModePerm)
+	fin, err := os.OpenFile(path + string(os.PathSeparator) +  "telegraf-revision", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return 0, err
 	}
