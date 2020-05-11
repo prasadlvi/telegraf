@@ -474,11 +474,8 @@ func getRevision(path string) (int, error) {
 		return 0, err
 	}
 
-	rd := bufio.NewReader(fin)
-	revisionStr, err := rd.ReadString('\n')
-	if err != nil {
-		return 0, err
-	}
+	scanner := bufio.NewScanner(fin)
+	revisionStr := scanner.Text()
 
 	err = fin.Close()
 	if err != nil {
