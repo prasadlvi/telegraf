@@ -227,12 +227,18 @@ func (h *HTTP) write(reqBody []byte) error {
 	defer resp.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		err = h.updateInputPluginConfig(bodyBytes)
+		if err != nil {
+			return err
+		}
+	} else if resp.StatusCode == http.StatusSeeOther {
+		log.Printf("I! Going to request for update")
+		err = h.updateTelegraf()
 		if err != nil {
 			return err
 		}
@@ -261,6 +267,54 @@ func (h *HTTP) updateInputPluginConfig(bodyBytes []byte) error {
 		return err
 	}
 	return nil
+}
+
+func (h *HTTP) updateTelegraf() error {
+	req, err := http.NewRequest(http.MethodGet, h.URL + "Update", nil)
+	if err != nil {
+		return err
+	}
+
+	revision, err := getRevision()
+	if err != nil {
+		return err
+	}
+
+	q := req.URL.Query()
+	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
+	q.Add("source", h.SourceAddress)
+	q.Add("revision", strconv.Itoa(revision))
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("Content-Type", defaultContentType)
+
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	log.Printf("I! Update requested")
+
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	out, err := os.Create("telegraf.bin.new")
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+
+	log.Printf("I! Update downloded successfully")
+
+	return err
 }
 
 func init() {
@@ -410,4 +464,33 @@ func reloadConfig() error {
 		}
 	}
 	return nil
+}
+
+func getRevision() (int, error) {
+	log.Printf("I! Going to find current revision")
+
+	fin, err := os.OpenFile("telegraf-revision", os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return 0, err
+	}
+
+	rd := bufio.NewReader(fin)
+	revisionStr, err := rd.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+
+	err = fin.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	revision, err := strconv.Atoi(revisionStr)
+	if err != nil {
+		return 0, err
+	}
+
+	log.Printf("I! current revision is %d", revision)
+
+	return revision, nil
 }
