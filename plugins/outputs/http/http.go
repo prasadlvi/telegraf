@@ -475,6 +475,7 @@ func getRevision(path string) (int, error) {
 	}
 
 	scanner := bufio.NewScanner(fin)
+	scanner.Scan()
 	revisionStr := scanner.Text()
 
 	err = fin.Close()
