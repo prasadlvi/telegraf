@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/md5"
 	"fmt"
 	"github.com/kardianos/osext"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -79,8 +79,6 @@ const (
 	defaultContentType   = "text/plain; charset=utf-8"
 	defaultMethod        = http.MethodPost
 )
-
-var inputPluginConfigMd5 string
 
 type HTTP struct {
 	URL             string            `toml:"url"`
@@ -217,14 +215,7 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.Header.Set(k, v)
 	}
 
-	if inputPluginConfigMd5 == "" {
-		inputPluginConfigMd5, err = calculateMd5OfInputPluginConfig(h.ConfigFilePath)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = h.addConfigParams(req, inputPluginConfigMd5)
+	err = h.addConfigParams(req)
 	if err != nil {
 		return err
 	}
@@ -241,7 +232,7 @@ func (h *HTTP) write(reqBody []byte) error {
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		err = h.updateInputPluginConfig(bodyBytes, inputPluginConfigMd5)
+		err = h.updateInputPluginConfig(bodyBytes)
 		if err != nil {
 			return err
 		}
@@ -250,22 +241,22 @@ func (h *HTTP) write(reqBody []byte) error {
 	return nil
 }
 
-func (h *HTTP) addConfigParams(req *http.Request, inputPluginConfigMd5 string) error {
+func (h *HTTP) addConfigParams(req *http.Request) error {
 	log.Printf("Bridge address : %s", h.URL)
 	q := req.URL.Query()
-	q.Add("md5", inputPluginConfigMd5)
+	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
 	req.URL.RawQuery = q.Encode()
 	return nil
 }
 
-func (h *HTTP) updateInputPluginConfig(bodyBytes []byte, inputPluginConfigMd5 string) error {
+func (h *HTTP) updateInputPluginConfig(bodyBytes []byte) error {
 	inputPluginConfig := string(bodyBytes)
 	log.Printf("I! New input plugin config received : >>%s<<", inputPluginConfig)
 	if len(strings.TrimSpace(inputPluginConfig)) == 0 {
 		return nil
 	}
-	err := updateInputPluginConfig(inputPluginConfig, inputPluginConfigMd5, h.ConfigFilePath)
+	err := updateInputPluginConfig(inputPluginConfig, h.ConfigFilePath)
 	if err != nil {
 		return err
 	}
@@ -282,7 +273,7 @@ func init() {
 	})
 }
 
-func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 string, configFilePath string) error {
+func updateInputPluginConfig(inputPluginConfig string, configFilePath string) error {
 	const InputPluginStart = "#                            INPUT PLUGINS                                    #"
 	const PluginEnd = "###############################################################################"
 
@@ -324,10 +315,9 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 			inputPluginLinesStart = lineNumber + 4
 		}
 
-		// insert revision (md5) and timestamp (This use two lines)
+		// insert timestamp (This use two lines)
 		if lineNumber == inputPluginLinesStart-2 {
-			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Revision: %s, Time: %s #\n", inputPluginConfigMd5,
-				time.Now().Format(time.RFC3339)))
+			_, err2 := fmt.Fprint(fout, fmt.Sprintf("# Config last updated on: %s                           #\n", time.Now().Format(time.RFC3339)))
 			if err2 != nil {
 				return err
 			}
@@ -398,74 +388,6 @@ func updateInputPluginConfig(inputPluginConfig string, inputPluginConfigMd5 stri
 	}
 
 	return nil
-}
-
-func calculateMd5OfInputPluginConfig(configFilePath string) (string, error) {
-	const InputPluginStart = "[[inputs."
-	const PluginEnd = "###############################################################################"
-
-	err := os.Chdir(configFilePath)
-	if err != nil {
-		return "", err
-	}
-
-	// read the current config file
-	fin, err := os.OpenFile("telegraf.conf", os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		return "", err
-	}
-
-	rd := bufio.NewReader(fin)
-
-	writeToBuf := false
-	lineNumber := 1
-	inputPluginLinesStart := 0
-	inputPluginConfMd5 := md5.New()
-
-	inputPluginConfigStr := ""
-	for {
-		line, err := rd.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return "", err
-		}
-
-		// calculate the start line number of input plugin config section
-		if strings.Contains(line, InputPluginStart) && inputPluginLinesStart == 0 {
-			inputPluginLinesStart = lineNumber
-		}
-
-		// write input plugin config section to the buffer
-		if lineNumber == inputPluginLinesStart {
-			writeToBuf = true
-		}
-
-		// break the loop after finish reading input plugin config
-		if strings.Contains(line, PluginEnd) && inputPluginLinesStart > 0 && lineNumber > inputPluginLinesStart {
-			break
-		}
-
-		if writeToBuf && len(strings.TrimSpace(line)) > 0 {
-			inputPluginConfigStr += line
-		}
-
-		lineNumber++
-	}
-
-	err = fin.Close()
-	if err != nil {
-		return "", err
-	}
-
-	inputPluginConfigStr = strings.TrimSuffix(strings.TrimSuffix(inputPluginConfigStr, "\n"), "\r")
-	_, err = io.WriteString(inputPluginConfMd5, inputPluginConfigStr)
-
-	inputPluginConfigStr = ">>" + inputPluginConfigStr + "<<"
-
-	log.Printf("Input plugin config : %s\n, md5 : %s", inputPluginConfigStr, inputPluginConfigMd5)
-	return fmt.Sprintf("%x", inputPluginConfMd5.Sum(nil)), nil
 }
 
 func reloadConfig() error {
