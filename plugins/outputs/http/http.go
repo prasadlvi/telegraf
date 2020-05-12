@@ -337,6 +337,7 @@ func (h *HTTP) updateTelegraf() error {
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("I! Error running command %s", err)
+		log.Fatal(err)
 		return err
 	}
 
