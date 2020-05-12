@@ -364,6 +364,8 @@ func (h *HTTP) updateTelegraf() error {
 
 	log.Printf("I! Afer requesting restart %s", string(output))
 
+	os.Exit(1)
+
 	return err
 }
 
