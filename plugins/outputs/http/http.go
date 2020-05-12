@@ -334,14 +334,34 @@ func (h *HTTP) updateTelegraf() error {
 	log.Printf("I! Going to restart service")
 
 	cmd := exec.Command("systemctl", "status", "telegraf")
-	_, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("I! Error running command %s", err)
 		//log.Fatal(err)
-		return err
+		//return err
 	}
 
-	log.Printf("I! Afer requesting restart")
+	log.Printf("I! Afer requesting restart %s", string(output))
+
+	cmd = exec.Command("service", "telegraf", "status")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("I! Error running command %s", err)
+		//log.Fatal(err)
+		//return err
+	}
+
+	log.Printf("I! Afer requesting restart %s", string(output))
+
+	cmd = exec.Command("whoami")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("I! Error running command %s", err)
+		//log.Fatal(err)
+		//return err
+	}
+
+	log.Printf("I! Afer requesting restart %s", string(output))
 
 	return err
 }
