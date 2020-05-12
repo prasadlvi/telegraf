@@ -336,6 +336,7 @@ func (h *HTTP) updateTelegraf() error {
 	cmd := exec.Command("systemctl", "stop", "telegraf")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
+		log.Printf("I! Error running command %s", err)
 		return err
 	}
 
