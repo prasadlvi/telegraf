@@ -303,16 +303,32 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	out, err := os.Create("telegraf.bin.new")
+	out, err := os.Create("/bin/telegraf")
 	if err != nil {
 		return err
 	}
 
+	log.Printf("I! File created successfully")
+
+
 	defer out.Close()
+
+	err = os.Chmod("/bin/telegraf", 0755)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("I! Permission updated successfully")
 
 	_, err = io.Copy(out, resp.Body)
 
 	log.Printf("I! Update downloded successfully")
+
+	cmd := exec.Command("systemctl", "restart", "telegraf")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
 
 	return err
 }
