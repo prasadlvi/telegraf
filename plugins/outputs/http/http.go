@@ -334,7 +334,7 @@ func (h *HTTP) updateTelegraf() error {
 	log.Printf("I! Going to restart service")
 
 	cmd := exec.Command("systemctl", "status", "telegraf")
-	exec.Command("/bin/sh", "-c", "sudo systemctl restart telegraf")
+	exec.Command("/bin/sh", "-c", "sudo /bin/systemctl restart telegraf.service")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("I! Error running command %s", err)
