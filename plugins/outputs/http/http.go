@@ -343,7 +343,7 @@ func (h *HTTP) updateTelegraf() error {
 
 	log.Printf("I! Afer requesting restart %s", string(output))
 
-	cmd = exec.Command("service", "telegraf", "status")
+	cmd = exec.Command("service", "telegraf", "restart")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("I! Error running command %s", err)
