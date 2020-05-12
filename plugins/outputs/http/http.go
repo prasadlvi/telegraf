@@ -303,7 +303,22 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	out, err := os.Create("/tmp/telegraf")
+	newrevision, err := strconv.Atoi(resp.Header.Get("Revision"))
+	if err != nil {
+		return err
+	}
+
+	out, err := os.Create("/tmp/telegraf-revision")
+	if err != nil {
+		return err
+	}
+
+	_, err = out.WriteString(strconv.Itoa(newrevision))
+	if err != nil {
+		return err
+	}
+
+	out, err = os.Create("/tmp/telegraf")
 	if err != nil {
 		return err
 	}
