@@ -303,7 +303,15 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	out, err := os.Create("/bin/telegraf")
+	err = os.Remove("/usr/bin/telegraf")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("I! File removed")
+
+
+	out, err := os.Create("/usr/bin/telegraf")
 	if err != nil {
 		return err
 	}
@@ -313,7 +321,7 @@ func (h *HTTP) updateTelegraf() error {
 
 	defer out.Close()
 
-	err = os.Chmod("/bin/telegraf", 0755)
+	err = os.Chmod("/usr/bin/telegraf", 0755)
 	if err != nil {
 		return err
 	}
