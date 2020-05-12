@@ -303,30 +303,14 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	err = os.Remove("/usr/bin/telegraf")
-	if err != nil {
-		return err
-	}
-
-	log.Printf("I! File removed")
-
-
-	out, err := os.Create("/usr/bin/telegraf")
+	out, err := os.Create("/tmp/telegraf")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("I! File created successfully")
 
-
 	defer out.Close()
-
-	err = os.Chmod("/usr/bin/telegraf", 0755)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("I! Permission updated successfully")
 
 	_, err = io.Copy(out, resp.Body)
 
