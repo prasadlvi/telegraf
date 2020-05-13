@@ -283,7 +283,7 @@ func (h *HTTP) updateTelegraf() error {
 	q := req.URL.Query()
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
-	q.Add("revision", strconv.Itoa(revision))
+	q.Add("revision", revision)
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
@@ -303,22 +303,7 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	newrevision, err := strconv.Atoi(resp.Header.Get("Revision"))
-	if err != nil {
-		return err
-	}
-
-	out, err := os.Create("/tmp/telegraf-revision")
-	if err != nil {
-		return err
-	}
-
-	_, err = out.WriteString(strconv.Itoa(newrevision))
-	if err != nil {
-		return err
-	}
-
-	out, err = os.Create("/tmp/telegraf")
+	out, err := os.Create("/tmp/telegraf")
 	if err != nil {
 		return err
 	}
@@ -487,29 +472,24 @@ func reloadConfig() error {
 	return nil
 }
 
-func getRevision(path string) (int, error) {
+func getRevision(path string) (string, error) {
 	log.Printf("I! Going to find current revision")
 
 	fin, err := os.OpenFile(path + string(os.PathSeparator) +  "telegraf-revision", os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	scanner := bufio.NewScanner(fin)
 	scanner.Scan()
-	revisionStr := scanner.Text()
+	revision := scanner.Text()
 
 	err = fin.Close()
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	revision, err := strconv.Atoi(revisionStr)
-	if err != nil {
-		return 0, err
-	}
-
-	log.Printf("I! current revision is %d", revision)
+	log.Printf("I! current revision is %s", revision)
 
 	return revision, nil
 }
