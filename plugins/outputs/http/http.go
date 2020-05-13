@@ -297,7 +297,7 @@ func (h *HTTP) updateTelegraf() error {
 	defer resp.Body.Close()
 
 	log.Printf("I! Checking for updates ...")
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil
 	}
