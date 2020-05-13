@@ -237,7 +237,6 @@ func (h *HTTP) write(reqBody []byte) error {
 			return err
 		}
 	} else if resp.StatusCode == http.StatusAccepted {
-		log.Printf("I! Going to request for update")
 		err = h.updateTelegraf()
 		if err != nil {
 			return err
