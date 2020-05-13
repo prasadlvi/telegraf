@@ -279,6 +279,7 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
+	log.Printf("test 1")
 	log.Printf("I! Checking for updates... Current revision is {%s}", revision)
 
 	q := req.URL.Query()
