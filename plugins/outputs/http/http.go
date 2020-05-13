@@ -280,6 +280,8 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
+	log.Printf("I! Checking for updates... Current revision is {%s}", revision)
+
 	q := req.URL.Query()
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
@@ -295,8 +297,6 @@ func (h *HTTP) updateTelegraf() error {
 	}
 
 	defer resp.Body.Close()
-
-	log.Printf("I! Checking for updates ...")
 
 	if resp.StatusCode != http.StatusOK {
 		return nil
@@ -470,8 +470,6 @@ func reloadConfig() error {
 }
 
 func getRevision(path string) (string, error) {
-	log.Printf("I! Going to find current revision")
-
 	fin, err := os.OpenFile(path + string(os.PathSeparator) +  "telegraf-revision", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return "", err
@@ -485,8 +483,6 @@ func getRevision(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	log.Printf("I! current revision is %s", revision)
 
 	return revision, nil
 }
