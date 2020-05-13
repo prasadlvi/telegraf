@@ -296,9 +296,8 @@ func (h *HTTP) updateTelegraf() error {
 
 	defer resp.Body.Close()
 
-	log.Printf("I! Update requested")
-
-
+	log.Printf("I! Checking for updates ...")
+	
 	if resp.StatusCode != http.StatusOK {
 		return nil
 	}
@@ -308,15 +307,13 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
-	log.Printf("I! File created successfully")
-
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 
 	log.Printf("I! Update downloded successfully")
 
-	log.Printf("I! Going to restart service")
+	log.Printf("I! Restarting service to apply the update ...")
 
 	os.Exit(1)
 
