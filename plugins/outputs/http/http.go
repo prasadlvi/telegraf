@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"github.com/kardianos/osext"
 	"io"
@@ -184,7 +186,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte) error {
-	log.Printf("test3") //TODO remove
+	log.Printf("test4") //TODO remove
 
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
@@ -312,7 +314,13 @@ func (h *HTTP) updateTelegraf() error {
 		return nil
 	}
 
-	out, err := os.Create("/tmp/telegraf")
+	binaryPath := "/tmp/telegraf"
+
+	if runtime.GOOS == "windows" {
+		binaryPath = h.ConfigFilePath + string(os.PathSeparator) + "telegraf.exe.new"
+	}
+
+	out, err := os.Create(binaryPath)
 	if err != nil {
 		return err
 	}
@@ -323,9 +331,23 @@ func (h *HTTP) updateTelegraf() error {
 
 	log.Printf("I! Update downloded successfully")
 
-	log.Printf("I! Restarting service to apply the update ...")
+	if runtime.GOOS == "windows" {
+		md5, err := getFileMd5(binaryPath)
+		if err != nil {
+			return err
+		}
+		log.Printf("I! New revision {%}", md5)
 
-	os.Exit(1)
+		d1 := []byte(md5)
+		err = ioutil.WriteFile(h.ConfigFilePath + string(os.PathSeparator) + "telegraf-revision", d1, 0755)
+		if err != nil {
+			return err
+		}
+		log.Printf("I! Revision file write successfully")
+	} else {
+		log.Printf("I! Restarting service to apply the update ...")
+		os.Exit(1)
+	}
 
 	return err
 }
@@ -501,4 +523,26 @@ func getRevision(path string) (string, error) {
 	log.Printf("I! Current revision is {%s}", revision)
 
 	return revision, nil
+}
+
+func getFileMd5(path string) (string, error) {
+	var fileMd5 string
+
+	file, err := os.Open(path)
+	if err != nil {
+		return fileMd5, err
+	}
+
+	defer file.Close()
+
+	hash := md5.New()
+
+	if _, err := io.Copy(hash, file); err != nil {
+		return fileMd5, err
+	}
+
+	hashInBytes := hash.Sum(nil)[:16]
+	fileMd5 = hex.EncodeToString(hashInBytes)
+
+	return fileMd5, nil
 }
