@@ -186,7 +186,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte) error {
-	log.Printf("test4") //TODO remove
+	log.Printf("test5") //TODO remove
 
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
