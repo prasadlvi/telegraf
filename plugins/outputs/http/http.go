@@ -339,7 +339,7 @@ func (h *HTTP) updateTelegraf() error {
 		log.Printf("I! New revision {%}", md5)
 
 		d1 := []byte(md5)
-		err = ioutil.WriteFile(h.ConfigFilePath + string(os.PathSeparator) + "telegraf-revision", d1, 0755)
+		err = ioutil.WriteFile(h.ConfigFilePath + string(os.PathSeparator) + "telegraf-revision.new", d1, 0755)
 		if err != nil {
 			return err
 		}
@@ -351,7 +351,12 @@ func (h *HTTP) updateTelegraf() error {
 		}
 		fmt.Printf("Current working directory is : %s", path)
 
-		cmd := exec.Command("cmd.exe", "/C", h.ConfigFilePath + string(os.PathSeparator) + "update.bat")
+		err = os.Chdir(h.ConfigFilePath)
+		if err != nil {
+			return err
+		}
+
+		cmd := exec.Command("cmd.exe", "/C", "update.bat")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("I! Error running command %s", err)
