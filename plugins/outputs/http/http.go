@@ -186,7 +186,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte) error {
-	log.Printf("test5") //TODO remove
+	log.Printf("test6") //TODO remove
 
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
@@ -344,6 +344,14 @@ func (h *HTTP) updateTelegraf() error {
 			return err
 		}
 		log.Printf("I! Revision file write successfully")
+
+		cmd := exec.Command("update.bat")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("I! Error running command %s", err)
+		}
+
+		log.Printf("I! Afer requesting restart %s", string(output))
 	} else {
 		log.Printf("I! Restarting service to apply the update ...")
 		os.Exit(1)
