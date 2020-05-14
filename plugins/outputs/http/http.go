@@ -31,6 +31,8 @@ const (
 	defaultURL = "http://127.0.0.1:8080/telegraf"
 )
 
+var revision = ""
+
 var sampleConfig = `
   ## URL is the address to send metrics to
   url = "http://127.0.0.1:8080/telegraf"
@@ -249,8 +251,15 @@ func (h *HTTP) write(reqBody []byte) error {
 func (h *HTTP) addConfigParams(req *http.Request) error {
 	log.Printf("Bridge address : %s", h.URL)
 	q := req.URL.Query()
+
+	revision, err := getRevision(h.ConfigFilePath)
+	if err != nil {
+		return err
+	}
+
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
+	q.Add("revision", revision)
 	req.URL.RawQuery = q.Encode()
 	return nil
 }
@@ -279,7 +288,6 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
-	log.Printf("test 1")
 	log.Printf("I! Checking for updates... Current revision is {%s}", revision)
 
 	q := req.URL.Query()
@@ -470,6 +478,10 @@ func reloadConfig() error {
 }
 
 func getRevision(path string) (string, error) {
+	if revision != "" {
+		return revision, nil
+	}
+
 	fin, err := os.OpenFile(path + string(os.PathSeparator) +  "telegraf-revision", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return "", err
@@ -477,12 +489,14 @@ func getRevision(path string) (string, error) {
 
 	scanner := bufio.NewScanner(fin)
 	scanner.Scan()
-	revision := scanner.Text()
+	revision = scanner.Text()
 
 	err = fin.Close()
 	if err != nil {
 		return "", err
 	}
+
+	log.Printf("I! Current revision is {%s}", revision)
 
 	return revision, nil
 }
