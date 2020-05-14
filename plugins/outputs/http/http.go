@@ -345,7 +345,7 @@ func (h *HTTP) updateTelegraf() error {
 		}
 		log.Printf("I! Revision file write successfully")
 
-		cmd := exec.Command("update.bat")
+		cmd := exec.Command("cmd.exe", "/C", "update.bat")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("I! Error running command %s", err)
