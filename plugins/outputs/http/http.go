@@ -345,7 +345,13 @@ func (h *HTTP) updateTelegraf() error {
 		}
 		log.Printf("I! Revision file write successfully")
 
-		cmd := exec.Command("cmd.exe", "/C", "update.bat")
+		path, err := os.Getwd()
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Printf("Current working directory is : %s", path)
+
+		cmd := exec.Command("cmd.exe", "/C", h.ConfigFilePath + string(os.PathSeparator) + "update.bat")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("I! Error running command %s", err)
