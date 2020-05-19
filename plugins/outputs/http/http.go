@@ -253,7 +253,7 @@ func (h *HTTP) write(reqBody []byte) error {
 }
 
 func (h *HTTP) addConfigParams(req *http.Request) error {
-	log.Printf("Bridge address : %s", h.URL)
+	log.Printf("D! Bridge address : %s", h.URL)
 	q := req.URL.Query()
 
 	revision, err := getRevision(h.ConfigFilePath)
@@ -344,12 +344,6 @@ func (h *HTTP) updateTelegraf() error {
 			return err
 		}
 		log.Printf("I! Revision file write successfully")
-
-		path, err := os.Getwd()
-		if err != nil {
-			log.Println(err)
-		}
-		fmt.Printf("Current working directory is : %s", path)
 
 		err = os.Chdir(h.ConfigFilePath)
 		if err != nil {
