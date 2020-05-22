@@ -473,7 +473,11 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	// telegraf --test --config /etc/telegraf/telegraf.conf
 	cmd := exec.Command("telegraf", "--test", "--config", "/etc/telegraf/telegraf.conf")
-	_, err = cmd.Output()
+	out, err := cmd.Output()
+
+	log.Printf("out: %s", out)
+	log.Printf("error: %s", err)
+
 	if err != nil {
 		log.Println("W! Received configuration is invalid and was ignored.")
 		err = os.Remove("telegraf.conf.new")
