@@ -509,7 +509,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 }
 
 func reloadConfig() error {
-	log.Println("I! Restarting Telegraf to load new input plugin configuration ...")
+	log.Println("I! Loading new input plugin configuration ...")
 
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("telegraf.exe", "--service", "restart")
