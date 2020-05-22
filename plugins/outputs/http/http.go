@@ -476,10 +476,9 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	out, err := cmd.Output()
 
 	log.Printf("out: %s", out)
-	log.Printf("error: %s", err)
 
 	if err != nil {
-		log.Println("W! Received configuration is invalid and was ignored.")
+		log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
