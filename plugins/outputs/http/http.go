@@ -472,7 +472,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	}
 
 	// telegraf --test --config /etc/telegraf/telegraf.conf
-	cmd := exec.Command("telegraf", "--test", "--config", "/etc/telegraf/telegraf.conf")
+	cmd := exec.Command("telegraf", "--test", "--config", "/etc/telegraf/telegraf.conf.new")
 	out, err := cmd.Output()
 
 	log.Printf("out: %s", out)
