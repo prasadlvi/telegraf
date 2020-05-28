@@ -341,7 +341,7 @@ func (h *HTTP) updateTelegraf() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("I! Revision file write successfully")
+		log.Printf("I! Revision file written successfully")
 
 		err = os.Chdir(h.ConfigFilePath)
 		if err != nil {
@@ -469,19 +469,19 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		return err
 	}
 
-	// telegraf --test --config /etc/telegraf/telegraf.conf
-	cmd := exec.Command("telegraf", "--test", "--config", "/etc/telegraf/telegraf.conf.new")
-	out, err := cmd.Output()
+	if runtime.GOOS != "windows" {
+		// telegraf --test --config /etc/telegraf/telegraf.conf
+		cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new")
+		out, err := cmd.Output()
 
-	log.Printf("out: %s", out)
-
-	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
-		err = os.Remove("telegraf.conf.new")
 		if err != nil {
-			return err
+			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
+			err = os.Remove("telegraf.conf.new")
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 
 	// remove current config file
