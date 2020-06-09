@@ -484,23 +484,37 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		}
 	}
 
+	if runtime.GOOS == "windows" {
+		// telegraf --test telegraf.conf 1> telegraf.conf.log 2>&1
+		cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new", "1>", "telegraf.conf.log", "2>&1")
+		out, err := cmd.Output()
+
+		if err != nil {
+			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
+			err = os.Remove("telegraf.conf.new")
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
 	// remove current config file
-	err = os.Remove("telegraf.conf")
-	if err != nil {
-		return err
-	}
-
-	// rename new config file
-	err = os.Rename("telegraf.conf.new", "telegraf.conf")
-	if err != nil {
-		return err
-	}
-
-	// restart Telegraf to load new input plugin configs
-	err = reloadConfig()
-	if err != nil {
-		return err
-	}
+	//err = os.Remove("telegraf.conf")
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//// rename new config file
+	//err = os.Rename("telegraf.conf.new", "telegraf.conf")
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//// restart Telegraf to load new input plugin configs
+	//err = reloadConfig()
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
