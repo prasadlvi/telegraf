@@ -514,13 +514,12 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 		defer func() {
 			if err := recover(); err != nil {
-				log.Println("I! panic occurred:", err)
+				log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
+				err = os.Remove("telegraf.conf.new")
 			}
 		}()
+
 		err = ag.Test(testContext, 0)
-		if err != nil {
-			log.Printf("I! Command error output is {%s}", err)
-		}
 
 		if err != nil {
 			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
@@ -531,23 +530,24 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 			return nil
 		}
 	}
+
 	// remove current config file
-	//err = os.Remove("telegraf.conf")
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//// rename new config file
-	//err = os.Rename("telegraf.conf.new", "telegraf.conf")
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//// restart Telegraf to load new input plugin configs
-	//err = reloadConfig()
-	//if err != nil {
-	//	return err
-	//}
+	err = os.Remove("telegraf.conf")
+	if err != nil {
+		return err
+	}
+
+	// rename new config file
+	err = os.Rename("telegraf.conf.new", "telegraf.conf")
+	if err != nil {
+		return err
+	}
+
+	// restart Telegraf to load new input plugin configs
+	err = reloadConfig()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
