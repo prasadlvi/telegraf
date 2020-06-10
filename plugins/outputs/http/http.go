@@ -7,6 +7,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/internal/config"
 	"github.com/kardianos/osext"
 	"io"
 	"io/ioutil"
@@ -34,6 +36,7 @@ const (
 )
 
 var revision = ""
+var testContext context.Context = nil
 
 var sampleConfig = `
   ## URL is the address to send metrics to
@@ -131,6 +134,7 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		}
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
 		client = oauthConfig.Client(ctx)
+		testContext = ctx
 	}
 
 	return client, nil
@@ -489,19 +493,14 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	if runtime.GOOS == "windows" {
 		log.Printf("I! Going to test config in windows.")
 
-		// telegraf --test telegraf.conf 1> telegraf.conf.log 2>&1
-		cmd := exec.Command("cmd", "/C", "telegraf", "--test", "--config", "telegraf.conf.new", "1>", "telegraf.conf.log", "2>&1")
-		out, err := cmd.Output()
+		c := config.NewConfig()
+		ag, err := agent.NewAgent(c)
+		err = ag.Test(testContext, 0)
 
-		log.Printf("I! Command output is {%s}, {%s}", out, err)
-
-		cmd = exec.Command("cmd", "/C", "telegraf1.exe", "--test")
-		out, err = cmd.Output()
-
-		log.Printf("I! Command output is {%s}, {%s}", out, err)
+		log.Printf("I! Command error output is {%s}", err)
 
 		if err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
+			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
 			err = os.Remove("telegraf.conf.new")
 			if err != nil {
 				return err
