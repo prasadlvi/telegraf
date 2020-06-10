@@ -514,7 +514,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
+				log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
 				err = os.Remove("telegraf.conf.new")
 			}
 		}()
