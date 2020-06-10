@@ -494,16 +494,28 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		log.Printf("I! Going to test config in windows.")
 
 		testContext, _ := context.WithCancel(context.Background())
+
+		log.Printf("I! Going to test config in windows. 1")
+
 		c := config.NewConfig()
+
+		log.Printf("I! Going to test config in windows. 2")
+
 		err := c.LoadConfig("telegraf.conf.new")
 		if err != nil {
 			log.Printf("I! Command error output is {%s}", err)
 		}
 
-		ag, err := agent.NewAgent(c)
-		err = ag.Test(testContext, 0)
+		log.Printf("I! Going to test config in windows. 3")
 
-		log.Printf("I! Command error output is {%s}", err)
+		ag, err := agent.NewAgent(c)
+
+		log.Printf("I! Going to test config in windows. 4")
+
+		err = ag.Test(testContext, 0)
+		if err != nil {
+			log.Printf("I! Command error output is {%s}", err)
+		}
 
 		if err != nil {
 			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
