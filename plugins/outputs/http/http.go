@@ -495,7 +495,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 		log.Printf("I! Command output is {%s}, {%s}", out, err)
 
-		cmd = exec.Command("telegraf")
+		cmd = exec.Command("dir")
 		out, err = cmd.Output()
 
 		log.Printf("I! Command output is {%s}, {%s}", out, err)
