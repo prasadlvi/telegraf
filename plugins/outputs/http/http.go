@@ -512,6 +512,11 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 		log.Printf("I! Going to test config in windows. 4")
 
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("I! panic occurred:", err)
+			}
+		}()
 		err = ag.Test(testContext, 0)
 		if err != nil {
 			log.Printf("I! Command error output is {%s}", err)
