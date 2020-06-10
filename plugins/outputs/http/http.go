@@ -490,12 +490,12 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		log.Printf("I! Going to test config in windows.")
 
 		// telegraf --test telegraf.conf 1> telegraf.conf.log 2>&1
-		cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new", "1>", "telegraf.conf.log", "2>&1")
+		cmd := exec.Command("cmd", "/C", "telegraf", "--test", "--config", "telegraf.conf.new", "1>", "telegraf.conf.log", "2>&1")
 		out, err := cmd.Output()
 
 		log.Printf("I! Command output is {%s}, {%s}", out, err)
 
-		cmd = exec.Command("dir")
+		cmd = exec.Command("cmd", "/C", "dir")
 		out, err = cmd.Output()
 
 		log.Printf("I! Command output is {%s}, {%s}", out, err)
