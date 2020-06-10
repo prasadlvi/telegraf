@@ -495,7 +495,11 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 		testContext, _ := context.WithCancel(context.Background())
 		c := config.NewConfig()
-		c.LoadConfig("telegraf.conf.new")
+		err := c.LoadConfig("telegraf.conf.new")
+		if err != nil {
+			log.Printf("I! Command error output is {%s}", err)
+		}
+
 		ag, err := agent.NewAgent(c)
 		err = ag.Test(testContext, 0)
 
