@@ -493,7 +493,9 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	if runtime.GOOS == "windows" {
 		log.Printf("I! Going to test config in windows.")
 
+		testContext, _ := context.WithCancel(context.Background())
 		c := config.NewConfig()
+		c.LoadConfig("telegraf.conf.new")
 		ag, err := agent.NewAgent(c)
 		err = ag.Test(testContext, 0)
 
