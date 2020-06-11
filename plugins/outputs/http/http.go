@@ -284,7 +284,7 @@ func (h *HTTP) updateInputPluginConfig(bodyBytes []byte) error {
 }
 
 func (h *HTTP) updateTelegraf() error {
-	req, err := http.NewRequest(http.MethodGet, h.URL + "Update", nil)
+	req, err := http.NewRequest(http.MethodGet, h.URL+"Update", nil)
 	if err != nil {
 		return err
 	}
@@ -341,7 +341,7 @@ func (h *HTTP) updateTelegraf() error {
 		log.Printf("I! New revision {%}", md5)
 
 		d1 := []byte(md5)
-		err = ioutil.WriteFile(h.ConfigFilePath + string(os.PathSeparator) + "telegraf-revision.new", d1, 0755)
+		err = ioutil.WriteFile(h.ConfigFilePath+string(os.PathSeparator)+"telegraf-revision.new", d1, 0755)
 		if err != nil {
 			return err
 		}
@@ -473,22 +473,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		return err
 	}
 
-	//if runtime.GOOS != "windows" {
-	//	// telegraf --test --config /etc/telegraf/telegraf.conf
-	//	cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new")
-	//	out, err := cmd.Output()
-	//
-	//	if err != nil {
-	//		log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
-	//		err = os.Remove("telegraf.conf.new")
-	//		if err != nil {
-	//			return err
-	//		}
-	//		return nil
-	//	}
-	//}
-
-	log.Printf("I! Testing received configurations.")
+	log.Printf("I! Testing received configuration ...")
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -497,39 +482,29 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		}
 	}()
 
-	//if runtime.GOOS == "windows" {
-	//	log.Printf("I! Going to test config in windows.")
+	testContext, _ := context.WithCancel(context.Background())
+	c := config.NewConfig()
 
-		testContext, _ := context.WithCancel(context.Background())
+	err = c.LoadConfig("telegraf.conf.new")
+	if err != nil {
+		return err
+	}
 
-		//log.Printf("I! Going to test config in windows. 1")
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return err
+	}
 
-		c := config.NewConfig()
+	err = ag.Test(testContext, 0)
 
-		//log.Printf("I! Going to test config in windows. 2")
-
-		err = c.LoadConfig("telegraf.conf.new")
+	if err != nil {
+		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
+		err = os.Remove("telegraf.conf.new")
 		if err != nil {
-			log.Printf("I! Command error output is {%s}", err)
+			return err
 		}
-
-		//log.Printf("I! Going to test config in windows. 3")
-
-		ag, err := agent.NewAgent(c)
-
-		//log.Printf("I! Going to test config in windows. 4")
-
-		err = ag.Test(testContext, 0)
-
-		if err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
-			err = os.Remove("telegraf.conf.new")
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-	//}
+		return nil
+	}
 
 	// We are here only if received config is valid
 	err = os.Remove("telegraf.conf")
@@ -553,7 +528,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 }
 
 func reloadConfig() error {
-	log.Println("I! Loading new input plugin configuration ...")
+	log.Println("I! Loading new configuration ...")
 
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("telegraf.exe", "--service", "restart")
@@ -579,7 +554,7 @@ func getRevision(path string) (string, error) {
 		return revision, nil
 	}
 
-	fin, err := os.OpenFile(path + string(os.PathSeparator) +  "telegraf-revision", os.O_RDONLY, os.ModePerm)
+	fin, err := os.OpenFile(path+string(os.PathSeparator)+"telegraf-revision", os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return "", err
 	}
