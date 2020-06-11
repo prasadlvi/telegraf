@@ -473,65 +473,65 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		return err
 	}
 
-	if runtime.GOOS != "windows" {
-		// telegraf --test --config /etc/telegraf/telegraf.conf
-		cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new")
-		out, err := cmd.Output()
+	//if runtime.GOOS != "windows" {
+	//	// telegraf --test --config /etc/telegraf/telegraf.conf
+	//	cmd := exec.Command("telegraf", "--test", "--config", "telegraf.conf.new")
+	//	out, err := cmd.Output()
+	//
+	//	if err != nil {
+	//		log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
+	//		err = os.Remove("telegraf.conf.new")
+	//		if err != nil {
+	//			return err
+	//		}
+	//		return nil
+	//	}
+	//}
 
-		if err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", out, err)
+	log.Printf("I! Testing received configurations.")
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
 			err = os.Remove("telegraf.conf.new")
-			if err != nil {
-				return err
-			}
-			return nil
 		}
-	}
+	}()
 
-	log.Printf("I! Going to test config.")
-
-	if runtime.GOOS == "windows" {
-		log.Printf("I! Going to test config in windows.")
+	//if runtime.GOOS == "windows" {
+	//	log.Printf("I! Going to test config in windows.")
 
 		testContext, _ := context.WithCancel(context.Background())
 
-		log.Printf("I! Going to test config in windows. 1")
+		//log.Printf("I! Going to test config in windows. 1")
 
 		c := config.NewConfig()
 
-		log.Printf("I! Going to test config in windows. 2")
+		//log.Printf("I! Going to test config in windows. 2")
 
-		err := c.LoadConfig("telegraf.conf.new")
+		err = c.LoadConfig("telegraf.conf.new")
 		if err != nil {
 			log.Printf("I! Command error output is {%s}", err)
 		}
 
-		log.Printf("I! Going to test config in windows. 3")
+		//log.Printf("I! Going to test config in windows. 3")
 
 		ag, err := agent.NewAgent(c)
 
-		log.Printf("I! Going to test config in windows. 4")
-
-		defer func() {
-			if err := recover(); err != nil {
-				log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
-				err = os.Remove("telegraf.conf.new")
-			}
-		}()
+		//log.Printf("I! Going to test config in windows. 4")
 
 		err = ag.Test(testContext, 0)
 
 		if err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored. {%s, %s}", err)
+			log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
 			err = os.Remove("telegraf.conf.new")
 			if err != nil {
 				return err
 			}
 			return nil
 		}
-	}
+	//}
 
-	// remove current config file
+	// We are here only if received config is valid
 	err = os.Remove("telegraf.conf")
 	if err != nil {
 		return err
