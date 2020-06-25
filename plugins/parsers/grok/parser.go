@@ -1,6 +1,7 @@
 package grok
 
 import (
+	"4d63.com/tz"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -178,10 +179,10 @@ func (p *Parser) Compile() error {
 		p.addCustomPatterns(scanner)
 	}
 
-	p.loc, err = time.LoadLocation(p.Timezone)
+	p.loc, err = tz.LoadLocation(p.Timezone)
 	if err != nil {
 		log.Printf("W! improper timezone supplied (%s), setting loc to UTC", p.Timezone)
-		p.loc, _ = time.LoadLocation("UTC")
+		p.loc, _ = tz.LoadLocation("UTC")
 	}
 
 	if p.timeFunc == nil {
