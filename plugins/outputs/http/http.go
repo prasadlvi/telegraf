@@ -258,14 +258,19 @@ func (h *HTTP) addConfigParams(req *http.Request) error {
 	log.Printf("D! Bridge address : %s", h.URL)
 	q := req.URL.Query()
 
-	revision, err := getRevision(h.ConfigFilePath)
-	if err != nil {
-		return err
+	isTinyCore := isTinyCore(h.ConfigFilePath)
+	if isTinyCore {
+		q.Add("isTinyCore", strconv.FormatBool(true))
+	} else {
+		revision, err := getRevision(h.ConfigFilePath)
+		if err != nil {
+			return err
+		}
+		q.Add("revision", revision)
 	}
 
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
-	q.Add("revision", revision)
 	req.URL.RawQuery = q.Encode()
 	return nil
 }
@@ -593,4 +598,14 @@ func getFileMd5(path string) (string, error) {
 	fileMd5 = hex.EncodeToString(hashInBytes)
 
 	return fileMd5, nil
+}
+
+
+func isTinyCore(path string) bool {
+	if _, err := os.Stat(path+string(os.PathSeparator)+"os-tinycore"); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
