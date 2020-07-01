@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	ps "github.com/bhendo/go-powershell"
+	"github.com/bhendo/go-powershell/backend"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows"
@@ -64,6 +66,13 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	}
 	w.Log.Debug("w.subscription:", w.subscription)
 
+	back := &backend.Local{}
+	shell, err := ps.New(back)
+	if err != nil {
+		w.Log.Warn("Error occurred", err)
+	}
+	defer shell.Exit()
+
 loop:
 	for {
 		eventHandles, err := EventHandles(w.subscription, 5)
@@ -104,12 +113,26 @@ loop:
 			description := strings.Join(eventDesc, "|")
 			description = re.ReplaceAllString(description, "|")
 
+			psQuery := fmt.Sprintf(`
+$XPath = '*[System[(EventRecordID=%d)]]'
+Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message -Expand Message
+`, evt.RecordID, evt.Channel)
+
+			stdout, _, err := shell.Execute(psQuery)
+			if err != nil {
+				w.Log.Warn("Error occurred", err)
+			}
+
+			message := strings.TrimSpace(stdout)
+			w.Log.Info("Message :", message)
+
 			// Pass collected metrics
 			acc.AddFields("win_event",
 				map[string]interface{}{
 					"record_id":   evt.RecordID,
 					"event_id":    evt.EventIdentifier.ID,
 					"level":       int(evt.LevelRaw),
+					"message":     message,
 					"description": description,
 					"source":      evt.Provider.Name,
 					"created":     evt.TimeCreated.SystemTime.String(),
