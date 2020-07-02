@@ -4,6 +4,7 @@ package win_eventlog
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -124,6 +125,7 @@ Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message
 			}
 
 			message := strings.TrimSpace(stdout)
+			message = re.ReplaceAllString(message, "|")
 			w.Log.Info("Message :", message)
 
 			// Pass collected metrics
