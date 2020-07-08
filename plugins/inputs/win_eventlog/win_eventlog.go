@@ -5,6 +5,10 @@ package win_eventlog
 import (
 	"bytes"
 	"fmt"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
+	"io"
+	"io/ioutil"
 	"regexp"
 	"strings"
 
@@ -114,6 +118,12 @@ loop:
 			description := strings.Join(eventDesc, "|")
 			description = re.ReplaceAllString(description, "|")
 
+			encoding, _, err := shell.Execute("[System.Text.Encoding]::Default.EncodingName")
+			if err != nil {
+				w.Log.Warn("Error occurred", err)
+			}
+			w.Log.Debug("PS Encoding: ", encoding)
+
 			psQuery := fmt.Sprintf(`
 $XPath = '*[System[(EventRecordID=%d)]]'
 Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message -Expand Message
@@ -126,6 +136,10 @@ Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message
 
 			message := strings.TrimSpace(stdout)
 			message = re.ReplaceAllString(message, "|")
+
+			if strings.Contains(encoding, "JIS") {
+				message, _ = FromShiftJIS(message)
+			}
 			w.Log.Debug("Message :", message)
 
 			// Pass collected metrics
@@ -178,4 +192,17 @@ func init() {
 			out: new(bytes.Buffer),
 		}
 	})
+}
+
+func FromShiftJIS(str string) (string, error) {
+	return transformEncoding(strings.NewReader(str), japanese.ShiftJIS.NewDecoder())
+}
+
+func transformEncoding( rawReader io.Reader, trans transform.Transformer) (string, error) {
+	ret, err := ioutil.ReadAll(transform.NewReader(rawReader, trans))
+	if err == nil {
+		return string(ret), nil
+	} else {
+		return "", err
+	}
 }
