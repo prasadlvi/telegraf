@@ -3,9 +3,16 @@
 package tail
 
 import (
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
+	"io"
+	"io/ioutil"
+	"runtime"
 	"strings"
 	"sync"
 
+	ps "github.com/bhendo/go-powershell"
+	"github.com/bhendo/go-powershell/backend"
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -36,6 +43,7 @@ type Tail struct {
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
 	acc        telegraf.Accumulator
+	isJIS	   bool
 
 	sync.Mutex
 }
@@ -110,6 +118,25 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	offsetsMutex.Lock()
 	offsets = make(map[string]int64)
 	offsetsMutex.Unlock()
+
+	if runtime.GOOS == "windows" {
+		back := &backend.Local{}
+		shell, err := ps.New(back)
+		if err != nil {
+			t.Log.Warn("Error occurred", err)
+		}
+		defer shell.Exit()
+
+		encoding, _, err := shell.Execute("[System.Text.Encoding]::Default.EncodingName")
+		if err != nil {
+			t.Log.Warn("Error occurred", err)
+		}
+		t.Log.Debug("PS Encoding: ", encoding)
+
+		if strings.Contains(encoding, "JIS") {
+			t.isJIS = true
+		}
+	}
 
 	return err
 }
@@ -219,6 +246,12 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
 
+		if runtime.GOOS == "windows" {
+			if t.isJIS {
+				text, _ = FromShiftJIS(text)
+			}
+		}
+
 		metrics, err := parseLine(parser, text, firstLine)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
@@ -278,4 +311,17 @@ func init() {
 	inputs.Add("tail", func() telegraf.Input {
 		return NewTail()
 	})
+}
+
+func FromShiftJIS(str string) (string, error) {
+	return transformEncoding(strings.NewReader(str), japanese.ShiftJIS.NewDecoder())
+}
+
+func transformEncoding(rawReader io.Reader, trans transform.Transformer) (string, error) {
+	ret, err := ioutil.ReadAll(transform.NewReader(rawReader, trans))
+	if err == nil {
+		return string(ret), nil
+	} else {
+		return "", err
+	}
 }

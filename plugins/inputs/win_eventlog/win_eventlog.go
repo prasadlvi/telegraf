@@ -9,6 +9,7 @@ import (
 	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
+	"log"
 	"regexp"
 	"strings"
 
@@ -35,6 +36,7 @@ type WinEventLog struct {
 	buf          []byte
 	out          *bytes.Buffer
 	Log          telegraf.Logger
+	isJIS        bool
 }
 
 var description = "Input plugin to collect Windows eventlog messages"
@@ -118,12 +120,6 @@ loop:
 			description := strings.Join(eventDesc, "|")
 			description = re.ReplaceAllString(description, "|")
 
-			encoding, _, err := shell.Execute("[System.Text.Encoding]::Default.EncodingName")
-			if err != nil {
-				w.Log.Warn("Error occurred", err)
-			}
-			w.Log.Debug("PS Encoding: ", encoding)
-
 			psQuery := fmt.Sprintf(`
 $XPath = '*[System[(EventRecordID=%d)]]'
 Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message -Expand Message
@@ -137,7 +133,7 @@ Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message
 			message := strings.TrimSpace(stdout)
 			message = re.ReplaceAllString(message, "|")
 
-			if strings.Contains(encoding, "JIS") {
+			if w.isJIS {
 				message, _ = FromShiftJIS(message)
 			}
 			w.Log.Debug("Message :", message)
@@ -186,10 +182,29 @@ func (w *WinEventLog) updateBookmark(evt EvtHandle) {
 }
 
 func init() {
+	back := &backend.Local{}
+	shell, err := ps.New(back)
+	if err != nil {
+		log.Printf("W! Error occurred : %s", err)
+	}
+	defer shell.Exit()
+
+	encoding, _, err := shell.Execute("[System.Text.Encoding]::Default.EncodingName")
+	if err != nil {
+		log.Printf("W! Error occurred %s", err)
+	}
+	log.Printf("D! PS Encoding: %s", encoding)
+
+	isJIS := false
+	if strings.Contains(encoding, "JIS") {
+		isJIS = true
+	}
+
 	inputs.Add("win_eventlog", func() telegraf.Input {
 		return &WinEventLog{
 			buf: make([]byte, renderBufferSize),
 			out: new(bytes.Buffer),
+			isJIS: isJIS,
 		}
 	})
 }
