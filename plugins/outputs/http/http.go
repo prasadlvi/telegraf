@@ -36,7 +36,7 @@ const (
 )
 
 var revision = ""
-var testContext context.Context = nil
+var configErrorCode = 0
 
 var sampleConfig = `
   ## URL is the address to send metrics to
@@ -134,7 +134,6 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		}
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
 		client = oauthConfig.Client(ctx)
-		testContext = ctx
 	}
 
 	return client, nil
@@ -269,6 +268,7 @@ func (h *HTTP) addConfigParams(req *http.Request) error {
 		q.Add("revision", revision)
 	}
 
+	q.Add("configErrorCode", strconv.Itoa(configErrorCode))
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
 	q.Add("source", h.SourceAddress)
 	req.URL.RawQuery = q.Encode()
@@ -492,18 +492,30 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	err = c.LoadConfig("telegraf.conf.new")
 	if err != nil {
-		return err
+		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
+		configErrorCode = 1
+		err = os.Remove("telegraf.conf.new")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	ag, err := agent.NewAgent(c)
 	if err != nil {
-		return err
+		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
+		configErrorCode = 1
+		err = os.Remove("telegraf.conf.new")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	err = ag.Test(testContext, 0)
-
 	if err != nil {
 		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
+		configErrorCode = 1
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
