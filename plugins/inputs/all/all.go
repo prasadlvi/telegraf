@@ -27,6 +27,7 @@ import (
 	//_ "github.com/influxdata/telegraf/plugins/inputs/consul"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
+	_ "github.com/influxdata/telegraf/plugins/inputs/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/dcos"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"

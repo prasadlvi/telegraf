@@ -1,11 +1,8 @@
 # Config Input Plugin
-
+Collect dummy metrics to send to the ThirdEye server to trigger config update.
 
 ### Configuration:
 ```toml
-[[inputs.file]]
-  ## Polling interval
+[[inputs.config]]
   interval = "30s"
-  ## Bridge address
-  bridge_address = "influx"
 ```

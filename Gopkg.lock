@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  digest = "1:592cf04f7d475de2a2f3fb6a7ee1e347906481ad542bbc9f5ffcfdee5fafdaca"
+  name = "4d63.com/embedfiles"
+  packages = ["."]
+  pruneopts = ""
+  revision = "fc64b22b55bbf3ff3dee5fd9dea565ed35793691"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:4eb1d326b84a003e1d6fef5e5c64c328a38a283ab7cd523a6b548513d5ed4ac4"
+  name = "4d63.com/tz"
+  packages = ["."]
+  pruneopts = ""
+  revision = "e5fde3f3d87d911fa13e75cd7aa1e29a993e3f8e"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:972f38a9c879a4920d1e3a3d3438104b6c06163bfa3e6f4064adb00468d40587"
   name = "cloud.google.com/go"
   packages = [
@@ -100,7 +116,7 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:33f56caa9ab45fedc63d3d1d3e342d9f9d00726071f22c67d06b0cd26d49a55e"
+  digest = "0:"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
@@ -234,6 +250,14 @@
   pruneopts = ""
   revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
   version = "v2.0.0"
+
+[[projects]]
+  digest = "1:d25acc7560ed91f825cb9b01a1e945bb1117cdcaba19077137e2d9ffc9cf6d05"
+  name = "github.com/cespare/xxhash"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d7df74196a9e781ede915320c11c378c1b2f3a1f"
+  version = "v2.1.1"
 
 [[projects]]
   branch = "master"
@@ -758,6 +782,14 @@
   packages = ["."]
   pruneopts = ""
   revision = "c2b33e84"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e71cc6b377264002aec0d9c235087e51ad7a3c1fb341bb4baa84709308b94fe8"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384"
 
 [[projects]]
   digest = "1:b498ceccf0d2efa0af877b1dda20d3742ef9ff7475123e8e922016f0b737069b"
@@ -1313,6 +1345,22 @@
   version = "v0.17.0"
 
 [[projects]]
+  digest = "1:6cd0c56c18047e5c0cdcd8b4b4a578e56ce0c087daf415f65a3528d093194102"
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  pruneopts = ""
+  revision = "845920076a298bdb984fb0f1b86052e4ca0a281c"
+  version = "v1.6.0"
+
+[[projects]]
+  digest = "1:3231357c44a4e2c3ebfd964c891080541904e1ecda5fea5c2c6b38313922673b"
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  pruneopts = ""
+  revision = "b587143a48b62b01d337824eab43700af6ffe222"
+  version = "v1.5.0"
+
+[[projects]]
   branch = "master"
   digest = "1:d709f6b44dffe11337b3730ebf5ae6bb1bc9273a1c204266921205158a5a523f"
   name = "golang.org/x/crypto"
@@ -1706,6 +1754,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "4d63.com/tz",
     "cloud.google.com/go/monitoring/apiv3",
     "cloud.google.com/go/pubsub",
     "collectd.org/api",
@@ -1728,6 +1777,7 @@
     "github.com/aws/aws-sdk-go/service/cloudwatch",
     "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
+    "github.com/cespare/xxhash",
     "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
     "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
@@ -1779,6 +1829,7 @@
     "github.com/jackc/pgx",
     "github.com/jackc/pgx/pgtype",
     "github.com/jackc/pgx/stdlib",
+    "github.com/kardianos/osext",
     "github.com/kardianos/service",
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
@@ -1828,6 +1879,7 @@
     "github.com/vmware/govmomi/vim25/types",
     "github.com/wavefronthq/wavefront-sdk-go/senders",
     "github.com/wvanbergen/kafka/consumergroup",
+    "go.uber.org/multierr",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
     "golang.org/x/oauth2",
