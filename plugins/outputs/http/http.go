@@ -482,7 +482,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
+			log.Printf("W! Received configuration is invalid and was ignored [Error Code : 001]. {%s}", err)
 			configErrorCode = 1
 			err = os.Remove("telegraf.conf.new")
 		}
@@ -493,8 +493,8 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	err = c.LoadConfig("telegraf.conf.new")
 	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
-		configErrorCode = 1
+		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 002]. {%s}", err)
+		configErrorCode = 2
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
@@ -504,8 +504,8 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	ag, err := agent.NewAgent(c)
 	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
-		configErrorCode = 1
+		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 003]. {%s}", err)
+		configErrorCode = 3
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
@@ -515,8 +515,8 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 
 	err = ag.Test(testContext, 0)
 	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored. {%s}", err)
-		configErrorCode = 1
+		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 004]. {%s}", err)
+		configErrorCode = 4
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
