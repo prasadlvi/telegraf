@@ -503,6 +503,8 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	}
 
 	ag, err := agent.NewAgent(c)
+	agent.NErrors.Set(0)
+
 	if err != nil {
 		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 003]. {%s}", err)
 		configErrorCode = 3
@@ -521,6 +523,7 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		if err != nil {
 			return err
 		}
+		agent.NErrors.Set(0)
 		return nil
 	}
 
