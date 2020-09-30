@@ -59,7 +59,10 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 
 	// Initialize bookmark
 	if w.bookmark == 0 {
-		w.updateBookmark(0)
+		err = w.updateBookmark(0)
+		if err != nil {
+			return err
+		}
 		w.Log.Debug("w.bookmarkonce:", w.bookmark)
 	}
 	w.Log.Debug("w.bookmark:", w.bookmark)
@@ -152,33 +155,40 @@ Get-WinEvent -LogName '%s' -FilterXPath $XPath | Select-Object -Property Message
 					"eventlog_name": evt.Channel,
 				})
 
-			w.updateBookmark(eventHandle)
+			err = w.updateBookmark(eventHandle)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (w *WinEventLog) updateBookmark(evt EvtHandle) {
+func (w *WinEventLog) updateBookmark(evt EvtHandle) error {
 	if w.bookmark == 0 {
 		lastEventsHandle, err := EvtQuery(0, w.EventlogName, w.Query, EvtQueryChannelPath|EvtQueryReverseDirection)
 
 		lastEventHandle, err := EventHandles(lastEventsHandle, 1)
 		if err != nil {
 			w.Log.Error(err.Error())
+			return err
 		}
 
 		w.bookmark, err = CreateBookmarkFromEvent(lastEventHandle[0])
 		if err != nil {
 			w.Log.Error("Setting bookmark:", err.Error())
+			return err
 		}
 	} else {
 		var err error
 		w.bookmark, err = CreateBookmarkFromEvent(evt)
 		if err != nil {
 			w.Log.Error("Setting bookmark:", err.Error())
+			return err
 		}
 	}
+	return nil
 }
 
 func init() {
