@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
@@ -478,52 +479,14 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 		return err
 	}
 
-	log.Printf("I! Testing received configuration ...")
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("W! Received configuration is invalid and was ignored [Error Code : 001]. {%s}", err)
-			configErrorCode = 1
-			err = os.Remove("telegraf.conf.new")
-		}
-	}()
-
-	testContext, _ := context.WithCancel(context.Background())
-	c := config.NewConfig()
-
-	err = c.LoadConfig("telegraf.conf.new")
+	errorCode, err := testConfig(inputPluginConfig)
 	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 002]. {%s}", err)
-		configErrorCode = 2
+		log.Printf("W! Received configuration is invalid and was ignored [Error Code : %d]. {%s}", errorCode, err)
+		configErrorCode = errorCode;
 		err = os.Remove("telegraf.conf.new")
 		if err != nil {
 			return err
 		}
-		return nil
-	}
-
-	ag, err := agent.NewAgent(c)
-	agent.NErrors.Set(0)
-
-	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 003]. {%s}", err)
-		configErrorCode = 3
-		err = os.Remove("telegraf.conf.new")
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	err = ag.Test(testContext, 0)
-	if err != nil {
-		log.Printf("W! Received configuration is invalid and was ignored [Error Code : 004]. {%s}", err)
-		configErrorCode = 4
-		err = os.Remove("telegraf.conf.new")
-		if err != nil {
-			return err
-		}
-		agent.NErrors.Set(0)
 		return nil
 	}
 
@@ -546,6 +509,174 @@ func updateInputPluginConfig(inputPluginConfig string, configFilePath string) er
 	}
 
 	return nil
+}
+
+func testConfig(inputPluginConfig string) (int, error) {
+	log.Printf("I! Testing received configuration ...")
+
+	var err error
+	errorCode := 0
+
+	defer func() {
+		if r := recover(); err != nil {
+			errorCode = 1
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown error.")
+			}
+		}
+	}()
+
+	testContext, _ := context.WithCancel(context.Background())
+	c := config.NewConfig()
+
+	err = c.LoadConfig("telegraf.conf.new")
+	if err != nil {
+		return 2, err
+	}
+
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return 3, err
+	}
+	agent.NErrors.Set(0)
+
+	err = ag.Test(testContext, 0)
+	if err != nil {
+		agent.NErrors.Set(0)
+		return 4, err
+	}
+
+	if strings.Contains(inputPluginConfig, "[[inputs.win_perf_counters]]") {
+		return testWinPrefConfig(inputPluginConfig)
+	}
+
+	return errorCode, nil
+}
+
+func testWinPrefConfig(inputPluginConfig string) (int, error) {
+	var err error
+	errorCode := 0
+
+	winPrefHeader := ""
+	winPerfObjects := make([]string, 0)
+	agentConfig := ""
+
+	lines := strings.Split(inputPluginConfig,"\n")
+
+	readingWinPrefHeader := false
+	readingPrefObject := false
+	readingAgentConfig := false
+
+
+	var pluginBuffer bytes.Buffer
+
+	for _, line := range lines {
+		if strings.Contains(line, "[[inputs.win_perf_counters]]") {
+			readingWinPrefHeader = true
+		}
+
+		if readingWinPrefHeader && strings.Contains(line, "[[inputs.win_perf_counters.object]]") {
+			readingWinPrefHeader = false
+			winPrefHeader = pluginBuffer.String()
+			pluginBuffer.Reset()
+			readingPrefObject = true
+			pluginBuffer.WriteString(line)
+			pluginBuffer.WriteString("\n")
+			continue
+		}
+
+		if readingPrefObject && strings.Contains(line, "[[inputs.win_perf_counters.object]]") {
+			winPerfObjects = append(winPerfObjects, pluginBuffer.String())
+			pluginBuffer.Reset()
+			pluginBuffer.WriteString(line)
+			pluginBuffer.WriteString("\n")
+			continue
+		}
+
+		if readingPrefObject && strings.Contains(line, "[[inputs.") && !strings.Contains(line, "[[inputs.win_perf_counters.object]]") {
+			winPerfObjects = append(winPerfObjects, pluginBuffer.String())
+			pluginBuffer.Reset()
+			pluginBuffer.WriteString(line)
+			pluginBuffer.WriteString("\n")
+			continue
+		}
+
+		if strings.Contains(line, "[[inputs.config]]") {
+			readingAgentConfig = true
+		}
+
+		if readingWinPrefHeader || readingPrefObject || readingAgentConfig {
+			pluginBuffer.WriteString(line)
+			pluginBuffer.WriteString("\n")
+		}
+	}
+
+	agentConfig = pluginBuffer.String()
+
+	for id, winPerfObject := range winPerfObjects {
+
+		tempConfigFileName := "telegraf.conf.win_pref_test_" + strconv.Itoa(id)
+		// create a new temp config file
+		fout, err := os.Create(tempConfigFileName)
+		if err != nil {
+			return 1, err
+		}
+
+		defer func() {
+			e := os.Remove(tempConfigFileName)
+			if e != nil {
+				errorCode = 1
+				err = e
+			}
+		}()
+
+		_, err = fmt.Fprint(fout, winPrefHeader)
+		if err != nil {
+			return 1, err
+		}
+
+		_, err = fmt.Fprint(fout, winPerfObject)
+		if err != nil {
+			return 1, err
+		}
+
+		_, err = fmt.Fprint(fout, agentConfig)
+		if err != nil {
+			return 1, err
+		}
+
+		err = fout.Close()
+		if err != nil {
+			return 1, err
+		}
+
+		testContext, _ := context.WithCancel(context.Background())
+		c := config.NewConfig()
+
+		err = c.LoadConfig(tempConfigFileName)
+		if err != nil {
+			return 2, err
+		}
+
+		ag, err := agent.NewAgent(c)
+		if err != nil {
+			return 3, err
+		}
+		agent.NErrors.Set(0)
+
+		err = ag.Test(testContext, 0)
+		if err != nil {
+			agent.NErrors.Set(0)
+			return 4, err
+		}
+	}
+
+	return errorCode, err
 }
 
 func reloadConfig() error {
