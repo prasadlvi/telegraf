@@ -300,7 +300,7 @@ func (h *HTTP) updateTelegraf() error {
 		return err
 	}
 
-	log.Printf("I! Checking for updates... Current revision is {%s}", revision)
+	log.Printf("I! Checking for updates... Current revision is {%s} update test 1", revision)
 
 	q := req.URL.Query()
 	q.Add("isWindows", strconv.FormatBool(runtime.GOOS == "windows"))
