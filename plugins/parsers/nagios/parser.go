@@ -90,6 +90,14 @@ func (p *NagiosParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], err
 }
 
+func (p *NagiosParser) IsMultiline() bool {
+	return false
+}
+
+func (p *NagiosParser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }

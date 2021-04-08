@@ -70,6 +70,14 @@ func (v *ValueParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
+func (p *ValueParser) IsMultiline() bool {
+	return false
+}
+
+func (p *ValueParser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 func (v *ValueParser) SetDefaultTags(tags map[string]string) {
 	v.DefaultTags = tags
 }
