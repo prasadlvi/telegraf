@@ -83,6 +83,14 @@ func (p *WavefrontParser) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, nil
 }
 
+func (p *WavefrontParser) IsMultiline() bool {
+	return false
+}
+
+func (p *WavefrontParser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 func (p *WavefrontParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	pp := p.parsers.Get().(*PointParser)
 	defer p.parsers.Put(pp)

@@ -139,6 +139,14 @@ func (p *parser) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("ParseLine not supported: %s, for data format: dropwizard", line)
 }
 
+func (p *parser) IsMultiline() bool {
+	return false
+}
+
+func (p *parser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 // SetDefaultTags sets the default tags
 func (p *parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
