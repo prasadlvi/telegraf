@@ -130,6 +130,14 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	return m, nil
 }
 
+func (p *Parser) IsMultiline() bool {
+	return false
+}
+
+func (p *Parser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	recordFields := make(map[string]interface{})
 	tags := make(map[string]string)

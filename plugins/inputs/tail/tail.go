@@ -3,6 +3,7 @@
 package tail
 
 import (
+	"bytes"
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	ps "github.com/bhendo/go-powershell"
 	"github.com/bhendo/go-powershell/backend"
@@ -201,7 +203,11 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			t.wg.Add(1)
 			go func() {
 				defer t.wg.Done()
-				t.receiver(parser, tailer)
+				if parser.IsMultiline() {
+					t.multilineReceiver(parser, tailer)
+				} else {
+					t.receiver(parser, tailer)
+				}
 			}()
 			t.tailers[tailer.Filename] = tailer
 		}
@@ -270,6 +276,103 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 
 	if err := tailer.Err(); err != nil {
 		t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+	}
+}
+
+// Multiline Receiver is launched if MULTILINE is enabled and run as a goroutine to continuously watch a tailed logfile
+// for changes, parse any incoming msgs, and add to the accumulator.
+func (t *Tail) multilineReceiver(parser parsers.Parser, tailer *tail.Tail) {
+	var firstLine = true
+	var buffer bytes.Buffer
+	var bufferLastModifiedTime time.Time
+
+	go bufferMonitor(&buffer, &bufferLastModifiedTime, parser, tailer, t)
+	for line := range tailer.Lines {
+		t.Log.Debugf("Processing log line %q", line.Text)
+		if line.Err != nil {
+			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
+			continue
+		}
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
+		if runtime.GOOS == "windows" {
+			if t.isJIS {
+				text, _ = FromShiftJIS(text)
+			}
+		}
+
+		var startOfLogLine, err = parser.IsNewLogLine(text)
+		if err != nil {
+			t.Log.Errorf("Malformed log line in %q: [%q]: %s", tailer.Filename, text, err.Error())
+		}
+
+		if startOfLogLine {
+			t.Log.Debugf("Start of new line detected")
+
+			if buffer.Len() > 0 {
+				var multilineLogLine = buffer.String()
+				t.Log.Debugf("Multiline log line in a single line %q", multilineLogLine)
+				metrics, err := parseLine(parser, multilineLogLine, firstLine)
+				if err != nil {
+					t.Log.Errorf("Malformed log line in %q: [%q]: %s",
+						tailer.Filename, multilineLogLine, err.Error())
+					continue
+				}
+				firstLine = false
+
+				for _, metric := range metrics {
+					metric.AddTag("path", tailer.Filename)
+					t.acc.AddMetric(metric)
+				}
+			}
+
+			t.Log.Debugf("Resetting the buffer. Starting reading a new line.")
+			buffer.Reset()
+			buffer.WriteString(text)
+
+		} else {
+			buffer.WriteString("|")
+			buffer.WriteString(text)
+			bufferLastModifiedTime = time.Now()
+		}
+
+	}
+
+	t.Log.Debugf("Tail removed for %q", tailer.Filename)
+
+	if err := tailer.Err(); err != nil {
+		t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+	}
+}
+
+func bufferMonitor(buf *bytes.Buffer, bufferLastModifiedTime *time.Time, parser parsers.Parser, tailer *tail.Tail, t *Tail) {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			buffer := *buf
+			now := time.Now()
+			if now.Sub(*bufferLastModifiedTime).Seconds() > 5 {
+				if buffer.Len() > 0 {
+					var multilineLogLine = buffer.String()
+					t.Log.Debugf("Multiline log line in a single line %q", multilineLogLine)
+					metrics, err := parseLine(parser, multilineLogLine, false)
+					if err != nil {
+						t.Log.Errorf("Malformed log line in %q: [%q]: %s", tailer.Filename, multilineLogLine, err.Error())
+						continue
+					}
+
+					for _, metric := range metrics {
+						metric.AddTag("path", tailer.Filename)
+						t.acc.AddMetric(metric)
+					}
+
+					t.Log.Debugf("Resetting the buffer.")
+					(*buf).Reset()
+				}
+			}
+		}
 	}
 }
 

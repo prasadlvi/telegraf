@@ -1,13 +1,12 @@
 package collectd
 
 import (
+	"collectd.org/api"
+	"collectd.org/network"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-
-	"collectd.org/api"
-	"collectd.org/network"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -109,6 +108,14 @@ func (p *CollectdParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
+}
+
+func (p *CollectdParser) IsMultiline() bool {
+	return false
+}
+
+func (p *CollectdParser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
 }
 
 func (p *CollectdParser) SetDefaultTags(tags map[string]string) {

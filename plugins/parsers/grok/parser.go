@@ -125,10 +125,15 @@ type Parser struct {
 	timeFunc func() time.Time
 	g        *grok.Grok
 	tsModder *tsModder
+	multiline bool
 }
 
 // Compile is a bound method to Parser which will process the options for our parser
 func (p *Parser) Compile() error {
+	if strings.Contains(p.CustomPatterns, "MULTILINE") {
+		p.multiline = true
+		p.Patterns = append(p.Patterns, "%{MULTILINE:multiline}")
+	}
 	p.typeMap = make(map[string]map[string]string)
 	p.tsMap = make(map[string]map[string]string)
 	p.patterns = make(map[string]string)
@@ -156,7 +161,7 @@ func (p *Parser) Compile() error {
 		p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 	}
 
-	if len(p.NamedPatterns) == 0 {
+	if len(p.NamedPatterns) == 0 || p.multiline && len(p.NamedPatterns) == 1 {
 		return fmt.Errorf("pattern required")
 	}
 
@@ -192,6 +197,27 @@ func (p *Parser) Compile() error {
 	return p.compileCustomPatterns()
 }
 
+func (p *Parser) IsMultiline() bool {
+	return p.multiline
+}
+
+func (p *Parser) IsNewLogLine(line string) (bool, error) {
+	var err error
+	// values are the parsed fields from the log line
+	var values map[string]string
+
+	var multilineStartPattern = p.NamedPatterns[len(p.NamedPatterns)-1]
+
+	if values, err = p.g.Parse(multilineStartPattern, line); err != nil {
+		log.Printf("Error while parsing line : {%q} %q", line, err)
+		return false, nil
+	}
+	if len(values) != 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 // ParseLine is the primary function to process individual lines, returning the metrics
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var err error
@@ -199,7 +225,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var values map[string]string
 	// the matching pattern string
 	var patternName string
-	for _, pattern := range p.NamedPatterns {
+	for i, pattern := range p.NamedPatterns {
+		if p.multiline && i == len(p.NamedPatterns) - 1 {
+			break;
+		}
 		if values, err = p.g.Parse(pattern, line); err != nil {
 			return nil, err
 		}

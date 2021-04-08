@@ -157,6 +157,14 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metric.New(measurement, tags, fieldValues, timestamp)
 }
 
+func (p *GraphiteParser) IsMultiline() bool {
+	return false
+}
+
+func (p *GraphiteParser) IsNewLogLine(line string) (bool, error) {
+	return false, nil
+}
+
 // ApplyTemplate extracts the template fields from the given line and
 // returns the measurement name and tags.
 func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, string, error) {
