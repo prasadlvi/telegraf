@@ -3,11 +3,11 @@
 package tail
 
 import (
-	"golang.org/x/text/encoding/japanese"
-	"golang.org/x/text/transform"
 	"bytes"
 	"context"
 	"errors"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
 	"runtime"
@@ -20,7 +20,6 @@ import (
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
-	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -62,7 +61,6 @@ type Tail struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	sem        semaphore
-	decoder    *encoding.Decoder
 }
 
 func NewTail() *Tail {
@@ -158,7 +156,6 @@ func (t *Tail) Init() error {
 	t.sem = make(semaphore, t.MaxUndeliveredLines)
 
 	var err error
-	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
 	return err
 }
 
@@ -267,10 +264,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					Poll:      poll,
 					Pipe:      t.Pipe,
 					Logger:    tail.DiscardingLogger,
-					OpenReaderFunc: func(rd io.Reader) io.Reader {
-						r, _ := utfbom.Skip(t.decoder.Reader(rd))
-						return r
-					},
 				})
 
 			if err != nil {
